@@ -15,6 +15,25 @@ class search_state():
 
 search = search_state()
 
+def restore():
+       
+    if 'dataframe' in st.session_state:
+        if st.button('Show Previous Data'):
+            df_data = st.session_state['dataframe']
+            st.dataframe(df_data)
+
+            def convert_for_download(df_data):
+                return df_data.to_csv().encode("utf-8")
+            csv = convert_for_download(df_data)
+
+            
+            st.download_button(
+                label="Re-Download CSV",
+                data=csv,
+                file_name="data.csv",
+                mime="text/csv",
+                icon=":material/download:"
+            )
 
 def data_for_drawDown(tweeted_token):
     tweeted_token = { date:value for date,value in tweeted_token.items() if value}
@@ -39,7 +58,7 @@ def data_for_drawDown(tweeted_token):
         st.error('Cant Compute DrawnDown. Most Prices Are Missing')
         st.stop()
 
-
+restore()
 st.header('Data-Extraction and Processing')
 with st.sidebar:
     st.title('Data Configuration')
@@ -154,12 +173,30 @@ if st.button('Analyse Tweet'):
     st.success( 'Succesfully Analyzed Tweeted Token(s)',icon="✅")
     time.sleep(5)
     st.dataframe(df_data)
+    st.session_state['dataframe'] = df_data
 
 
     def convert_for_download(df_data):
         return df_data.to_csv().encode("utf-8")
     csv = convert_for_download(df_data)
     st.session_state['analyzor'] = analyzor
+
+    
+    st.download_button(
+        label="Download CSV",
+        data=csv,
+        file_name="data.csv",
+        mime="text/csv",
+        icon=":material/download:"
+    )
+
+if 'dataframe' in st.session_state:
+    df_data = st.session_state['dataframe']
+    st.dataframe(df_data)
+
+    def convert_for_download(df_data):
+        return df_data.to_csv().encode("utf-8")
+    csv = convert_for_download(df_data)
 
     
     st.download_button(
