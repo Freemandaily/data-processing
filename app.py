@@ -28,9 +28,16 @@ def data_for_drawDown(tweeted_token):
                 'prices' : [token_data['Price_Tweeted_At'],token_data['price_5m'],token_data['price_10m']],
                 'token': token_data['symbol']
             }
+            if None in influencer_data['prices']:
+                continue
             handles_data.append(influencer_data)
-    
-    st.session_state['handles_data'] = handles_data
+    if handles_data:
+        print('cam comput drawdown')
+        st.session_state['handles_data'] = handles_data
+    else:
+        print('cant comput drawdown')
+        st.error('Cant Compute DrawnDown. Most Prices Are Missing')
+        st.stop()
 
 
 st.header('Data-Extraction and Processing')

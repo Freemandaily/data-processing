@@ -13,11 +13,13 @@ def max_drawdown(token_data,index):
     max_drawdown  = 0
     
     try:
+        max_price = max(prices)
         for price in prices:
             if price > max_so_far :
                 max_so_far = price
             drawadown = (( price - max_so_far) / max_so_far) * 100
             max_drawdown = min(drawadown,max_drawdown)
+        
     except:
         max_drawdown = 0 
         max_price = 0
