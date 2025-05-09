@@ -7,12 +7,7 @@ import pytz,re
 import json
 import streamlit as st
 
-with open('key.json','r') as file:
-    keys = json.load(file)
-    bearerToken =keys['bearerToken']
-
-
-# bearerToken =st.secrets['bearer_token']
+bearerToken =st.secrets['bearer_token']
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
