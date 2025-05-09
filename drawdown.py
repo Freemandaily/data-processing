@@ -11,6 +11,7 @@ def max_drawdown(token_data,index):
     prices = token_data[index]['prices']
     max_so_far = prices[0]
     max_drawdown  = 0
+    
     try:
         for price in prices:
             if price > max_so_far :
@@ -19,9 +20,9 @@ def max_drawdown(token_data,index):
             max_drawdown = min(drawadown,max_drawdown)
     except:
         max_drawdown = 0 
+        max_price = 0
 
-    return max_drawdown,max(prices)
-
+    return max_drawdown,max_price
 def compute_DrawDown(token_data,index):
     data = pd.DataFrame()
     data['Prices (usd)'] = token_data[index]['prices']
