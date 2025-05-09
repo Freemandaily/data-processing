@@ -4,7 +4,13 @@ import requests,json
 from datetime import datetime, timedelta
 import streamlit as st
 
-moralis = st.secrets['moralis_key']
+
+
+with open('key.json','r') as file:
+    keys = json.load(file)
+    moralis = keys['moralis']
+
+# moralis = st.secrets['moralis_key']
 
 class price_with_interval:
     def __init__(self):
@@ -116,12 +122,14 @@ def Tweet_tokenInfoProcessor(jup_token_datas:dict,tweet_token_detail:dict):
         token_contracts = [contract.upper() for contract in token_fetched['contracts']]
         username  = token_fetched['username']
         
-        # fetch_count = 0
         for jupToken in jup_token_datas:
            
             try:
                
                 if jupToken['symbol'].upper() in token_symbol:
+                        if 'valid contracts' in st.session_state:
+                            if jupToken['address'].upper() not in st.session_state['valid contracts']: # Make sure that only searched contract are matched
+                                continue
                         print('Token With Same Symbol Found')
                         timeframe_prices = price_with_interval()
                         pair_address = dexScreener_token_data(jupToken['address']) # Call to get token pair address from dexscreener
@@ -164,6 +172,9 @@ def Tweet_tokenInfoProcessor(jup_token_datas:dict,tweet_token_detail:dict):
                     timeframe_prices.token_interval_prices = []
     
 
+    if 'valid contracts' in st.session_state:
+        del st.session_state['valid contracts']
+
     structured_data= { date:value for date,value in structured_data.items() if value}
     if structured_data:
        st.toast('Filtering  Fetched Token Price Data!')
@@ -173,6 +184,7 @@ def Tweet_tokenInfoProcessor(jup_token_datas:dict,tweet_token_detail:dict):
     else:
         Error_message = {'Error':'Unable To Fetch Tokens Prices Data\nPlease Check Your Provider Usage eg Moralis!','Message':'Filtering  Fetched Token Price Data!'}
         return Error_message
+    
     
 # This Function fetches token address by searching with token symbols 
 def token_tweeted_analyzor(tweet_token_detail:dict,strict_token='Strict Token')-> dict: 

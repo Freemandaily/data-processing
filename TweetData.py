@@ -7,7 +7,12 @@ import pytz,re
 import json
 import streamlit as st
 
-bearerToken =st.secrets['bearer_token']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
+
+
+# bearerToken =st.secrets['bearer_token']
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -47,6 +52,9 @@ class processor:
             'ticker_names' : re.findall(ticker_partterns,tweet_text),
             'contracts' : re.findall(contract_patterns,tweet_text) 
         }
+        if 'valid contracts' in st.session_state:
+            contracts = [contract for contract in token_details['contracts'] if contract.upper() in st.session_state['valid contracts']]
+            token_details['contracts'] = contracts
         return token_details
 
     # Using X API to fetch user tweets
@@ -82,8 +90,6 @@ class processor:
                             'username': self.username
                         }
                         user_tweets.append(tweet_dict)
-            #print(user_tweets)
-            # return user_tweets
             self.tweets = user_tweets
         except Exception as e:
             Error_message = {'Error':f'Failed To Fetch Tweets Because of  {e}\nUpgrade Your X Developer Plan or Wait For Sometimes'}
@@ -125,6 +131,7 @@ class processor:
                     'date': tweet['created_at']
                 }
                 fetched_Token_details.append(refined_details)
+
             tweeted_Token_details = self.Reformat(fetched_Token_details)
             return tweeted_Token_details
         else :
@@ -183,8 +190,9 @@ class processor:
     def search_tweet_with_contract(self,text_inputs,start_time):
         user_tweet = [ ]
         try:
-            contracts = [text for text in text_inputs if not text.startswith('0x') and len(text) >= 32]
+            contracts = [text.upper() for text in text_inputs if not text.startswith('0x') and len(text) >= 32]
             if contracts:
+                st.session_state['valid contracts'] = contracts # for matching only te searched contract in fetchTicker_Contract()
                 for contract in contracts:
                     search = self.client.search_recent_tweets(contract,tweet_fields=['author_id','created_at'],start_time=start_time)
                     if search.data:
