@@ -4,13 +4,7 @@ import requests,json
 from datetime import datetime, timedelta
 import streamlit as st
 
-
-
-with open('key.json','r') as file:
-    keys = json.load(file)
-    moralis = keys['moralis']
-
-# moralis = st.secrets['moralis_key']
+moralis = st.secrets['moralis_key']
 
 class price_with_interval:
     def __init__(self):
