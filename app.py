@@ -31,6 +31,7 @@ def restore():
                 label="Re-Download CSV",
                 data=csv,
                 file_name="data.csv",
+                key=2,
                 mime="text/csv",
                 icon=":material/download:"
             )
@@ -186,26 +187,11 @@ if st.button('Analyse Tweet'):
         label="Download CSV",
         data=csv,
         file_name="data.csv",
+        key=1,
         mime="text/csv",
         icon=":material/download:"
     )
 
-if 'dataframe' in st.session_state:
-    df_data = st.session_state['dataframe']
-    st.dataframe(df_data)
-
-    def convert_for_download(df_data):
-        return df_data.to_csv().encode("utf-8")
-    csv = convert_for_download(df_data)
-
-    
-    st.download_button(
-        label="Download CSV",
-        data=csv,
-        file_name="data.csv",
-        mime="text/csv",
-        icon=":material/download:"
-    )
 
 if 'analyzor' in st.session_state:
     if st.button('Check DrawDown'):
