@@ -6,7 +6,12 @@ import asyncio,aiohttp
 import streamlit as st
 
 
-moralis = st.secrets['moralis_key']
+
+with open('key.json','r') as file:
+    keys = json.load(file)
+    moralis = keys['moralis']
+
+# moralis = st.secrets['moralis_key']
 
 class price_with_interval:
     def __init__(self):
@@ -262,6 +267,7 @@ def Tweet_tokenInfoProcessor(jup_token_datas:dict,tweet_token_detail:dict):
                 #     print('Contract found')
                 timeframe_prices = price_with_interval()
                 pair_address = dexScreener_token_data(contract)  #(jupToken['address']) # Call to get the pair address from dexscreener
+                
                 if 'Error' in pair_address:
                     print(pair_address['Error'])
                     continue
@@ -280,16 +286,16 @@ def Tweet_tokenInfoProcessor(jup_token_datas:dict,tweet_token_detail:dict):
                 # st.write(price_timeframes)
                 # st.stop()
                 price_data = price_timeframes[0][pair_address]
-                structured_data[date][jupToken['address']]['Price_Tweeted_At'] = price_data['5m']['open_price']#fetchPrice(pair_address,date,5,timeframe_prices,get_start_price='YES')
-                structured_data[date][jupToken['address']]['price_5m'] = price_data['5m']['close_price'] #fetchPrice(pair_address,date,5,timeframe_prices) # 5 min timeFrame
-                structured_data[date][jupToken['address']]['5m Drawdown'] = price_data['5m']['max_drawdown']
-                structured_data[date][jupToken['address']]['price_10m'] = price_data['10m']['close_price']#fetchPrice(pair_address,date,10,timeframe_prices) 
-                structured_data[date][jupToken['address']]['10m Drawdown'] = price_data['10m']['max_drawdown']
-                structured_data[date][jupToken['address']]['price_15m'] = price_data['15m']['close_price']#fetchPrice(pair_address,date,15,timeframe_prices)
-                structured_data[date][jupToken['address']]['15m Drawdown'] = price_data['15m']['max_drawdown']
-                structured_data[date][jupToken['address']]['price_5m%Increase'] = percent_increase(structured_data[date][jupToken['address']]['Price_Tweeted_At'],structured_data[date][jupToken['address']]['price_5m'])
-                structured_data[date][jupToken['address']]['price_10m%Increase'] = percent_increase(structured_data[date][jupToken['address']]['Price_Tweeted_At'],structured_data[date][jupToken['address']]['price_10m'])
-                structured_data[date][jupToken['address']]['price_15m%Increase'] = percent_increase(structured_data[date][jupToken['address']]['Price_Tweeted_At'],structured_data[date][jupToken['address']]['price_15m'])
+                structured_data[date][contract]['Price_Tweeted_At'] = price_data['5m']['open_price']#fetchPrice(pair_address,date,5,timeframe_prices,get_start_price='YES')
+                structured_data[date][contract]['price_5m'] = price_data['5m']['close_price'] #fetchPrice(pair_address,date,5,timeframe_prices) # 5 min timeFrame
+                structured_data[date][contract]['5m Drawdown'] = price_data['5m']['max_drawdown']
+                structured_data[date][contract]['price_10m'] = price_data['10m']['close_price']#fetchPrice(pair_address,date,10,timeframe_prices) 
+                structured_data[date][contract]['10m Drawdown'] = price_data['10m']['max_drawdown']
+                structured_data[date][contract]['price_15m'] = price_data['15m']['close_price']#fetchPrice(pair_address,date,15,timeframe_prices)
+                structured_data[date][contract]['15m Drawdown'] = price_data['15m']['max_drawdown']
+                structured_data[date][contract]['price_5m%Increase'] = percent_increase(structured_data[date][contract]['Price_Tweeted_At'],structured_data[date][contract]['price_5m'])
+                structured_data[date][contract]['price_10m%Increase'] = percent_increase(structured_data[date][contract]['Price_Tweeted_At'],structured_data[date][contract]['price_10m'])
+                structured_data[date][contract]['price_15m%Increase'] = percent_increase(structured_data[date][contract]['Price_Tweeted_At'],structured_data[date][contract]['price_15m'])
                 timeframe_prices.token_interval_prices = []
 
 
@@ -305,7 +311,6 @@ def Tweet_tokenInfoProcessor(jup_token_datas:dict,tweet_token_detail:dict):
     else:
         Error_message = {'Error':'Unable To Fetch Tokens Prices Data\nPlease Check Your Provider Usage eg Moralis!','Message':'Filtering  Fetched Token Price Data!'}
         return Error_message
-    
     
 # This Function fetches token address by searching with token symbols 
 def token_tweeted_analyzor(tweet_token_detail:dict,strict_token='Strict Token')-> dict: 
@@ -323,7 +328,7 @@ def token_tweeted_analyzor(tweet_token_detail:dict,strict_token='Strict Token')-
             try:
                 token_datas = response.json()
                 analyzor = Tweet_tokenInfoProcessor(token_datas,tweet_token_detail)
-
+                print(analyzor)
                 if 'Error' in analyzor:
                     return analyzor
                 # print(analyzor)
