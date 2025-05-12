@@ -21,7 +21,7 @@ def add_to_csv(tweeted_token:dict)->None:
         for token_address,token_data in info.items():
             Influencer_data = {
                     "Influencer": token_data['username'],#f'@{Influencer_name}',
-                    "Token": token_data['symbol'],
+                    # "Token": token_data['symbol'],
                     "Address": f'{token_address[:3]}...{token_address[-3:]}',
                     "Tweet Date": date[:10] ,
                     "Tweeted Price": f'   {token_data['Price_Tweeted_At']}     ',
