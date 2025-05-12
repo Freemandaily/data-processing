@@ -1,4 +1,6 @@
+from ast import main
 import time
+from urllib import response
 import tweepy
 import sys
 from datetime import timedelta
@@ -6,8 +8,16 @@ import datetime
 import pytz,re
 import json
 import streamlit as st
+import asyncio 
+import aiohttp
+import pandas as pd
 
-bearerToken =st.secrets['bearer_token']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
+
+
+# bearerToken =st.secrets['bearer_token']
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -189,20 +199,21 @@ class processor:
             if contracts:
                 st.session_state['valid contracts'] = contracts # for matching only te searched contract in fetchTicker_Contract()
                 for contract in contracts:
-                    search = self.client.search_recent_tweets(contract,tweet_fields=['author_id','created_at'],start_time=start_time)
-                    if search.data:
-                        for search in search.data:
-                            user = self.client.get_user(id=search.author_id,user_fields=['username'])
-                            username = user.data.username
-                            tweet_dict = {
-                                'tweet_text':search.text,
-                                'created_at':search.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                                'username':username
-                            }
-                            user_tweet.append(tweet_dict) 
-                    else:
-                        st.error('No Tweet Contains The Contracts')
-                        st.stop()
+                            pass
+                    # search = self.client.search_recent_tweets(contract,tweet_fields=['author_id','created_at'],start_time=start_time)
+                    # if search.data:
+                        # for search in search.data:
+                        #     user = self.client.get_user(id=search.author_id,user_fields=['username'])
+                        #     username = user.data.username
+                        #     tweet_dict = {
+                        #         'tweet_text':search.text,
+                        #         'created_at':search.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                        #         'username':username
+                        #     }
+                            # user_tweet.append(tweet_dict) 
+                    # else:
+                    #     st.error('No Tweet Contains The Contracts')
+                    #     st.stop()
                 self.tweets = user_tweet
             else:
                 st.error('Please Enter only Solana Mint Token Contract (32 to 42 char)') 
@@ -212,3 +223,202 @@ class processor:
             st.stop()
 
 
+
+class contractProcessor():
+    
+   
+
+    def __init__(self,mint_addresses:list,date_time):
+        self.mint_addresses = mint_addresses # list
+        self.pairs = []
+        self.tokens_data = []
+        self.date_time = date_time
+        self.contracts_price_data = []
+
+
+        
+    async def fetch_ohlc_and_compute(self,session,endpoint_req) -> dict:
+        async with session.get(endpoint_req) as response:
+            try:
+                response_data = await response.json()
+                price_data = response_data['data']['attributes']['ohlcv_list']
+                removable_index = [0,5]
+                price_data = [price for subprice in price_data for index, price in enumerate(subprice) if index not in removable_index]
+            
+            
+                max_so_far = price_data[0]
+                max_drawdown  = 0
+                max_price = max(price_data)
+                min_price = min(price_data)
+            except:
+                st.error('Please Choose Timeframe Within Token Traded Prices')
+                # st.stop()
+            
+            try:
+                for price in price_data:
+                    if price > max_so_far :
+                        max_so_far = price
+                    drawadown = (( price - max_so_far) / max_so_far) * 100
+                    max_drawdown = min(drawadown,max_drawdown)
+                    
+                price_info = {'highest_price': round(max_price,7),
+                            'lowest_price':round(min_price,7),
+                            'max_drawdown':str(round(max_drawdown,3)) +'%'
+                            }
+                return price_info
+            except Exception as e:
+                st.error('Please Choose Timeframe Within Token Traded Pricess')
+
+        
+
+    async def gecko_price_fetch(self,session,pair,five_timeframe_stamp,ten_timeframe_stamp,fifteen_timeframe_stamp) -> dict:
+        try:
+            task1 = asyncio.create_task(self.fetch_ohlc_and_compute(session,f'https://api.geckoterminal.com/api/v2/networks/solana/pools/{pair}/ohlcv/minute?aggregate=1&before_timestamp={int(five_timeframe_stamp)}&limit=5&currency=usd&token=base'))
+            task2 = asyncio.create_task(self.fetch_ohlc_and_compute(session,f'https://api.geckoterminal.com/api/v2/networks/solana/pools/{pair}/ohlcv/minute?aggregate=1&before_timestamp={int(ten_timeframe_stamp)}&limit=10&currency=usd&token=base'))
+            task3 = asyncio.create_task(self.fetch_ohlc_and_compute(session,f'https://api.geckoterminal.com/api/v2/networks/solana/pools/{pair}/ohlcv/minute?aggregate=1&before_timestamp={int(fifteen_timeframe_stamp)}&limit=15&currency=usd&token=base'))
+            
+            five_minutes_task = await task1
+            ten_minutes_task = await task2
+            fifteen_minutes_task = await task3
+            
+            pair_data_info = {pair:{ 
+                '5m': five_minutes_task,
+                '10m': ten_minutes_task,
+                '15m': fifteen_minutes_task
+            }}
+            return pair_data_info
+        except Exception as e:
+            st.error(f'Please Choose Timeframe Within Token Traded Prices')
+
+
+    def process_date_time(self,added_minute):
+        from datetime import datetime
+        combine = self.date_time
+        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S")
+        processed_date_time = time_object + timedelta(minutes=added_minute)
+        added_date_time = processed_date_time.timestamp()
+        
+        return added_date_time # timestamp
+
+    async def main(self,five_timeframe_stamp,ten_timeframe_stamp,fifteen_timeframe_stamp):
+        async with aiohttp.ClientSession() as session:
+            task_container = [self.gecko_price_fetch(session,pair,five_timeframe_stamp,ten_timeframe_stamp,fifteen_timeframe_stamp) for pair in self.pairs]
+            contracts_price_data = await asyncio.gather(*task_container)
+            # print(contracts_price_data)
+            self.contracts_price_data = contracts_price_data
+            
+        for data in self.tokens_data:
+            pair = data['pair']
+            # print(pair)
+            for element in self.contracts_price_data:
+                try:
+                    element[pair]['address'] = data['address']
+                    element[pair]['symbol'] = data['symbol']
+                except:
+                    pass
+        
+    
+    def process_contracts(self):
+        five_timeframe_stamp = self.process_date_time(5)
+        ten_timeframe_stamp = self.process_date_time(10)
+        fifteen_timeframe_stamp= self.process_date_time(15)
+        if 'data_frames' not in st.session_state:
+            asyncio.run(self.main(five_timeframe_stamp,ten_timeframe_stamp,fifteen_timeframe_stamp))
+
+    async def pair(self,session,address,pair_endpoint):
+        try:
+            async with session.get(pair_endpoint) as response:
+                try:
+                    result = await response.json()
+                    pair_address = result['data'][0]['attributes']['address']
+                    symbol = result['data'][0]['attributes']['name']
+                    token_data = {'address':address,
+                                'pair':pair_address,
+                                'symbol':symbol}
+                    self.pairs.append(pair_address)
+                    self.tokens_data.append(token_data)
+                except ValueError as e:
+                    st.error(f'Check If This Mint Address Is Correct : {e}')
+        except :
+            st.error('Gecko Rate Limited : Try AGain')
+
+    async def pair_main(self):
+        async with aiohttp.ClientSession() as session:
+            pairs_container = [self.pair(session,address,f'https://api.geckoterminal.com/api/v2/networks/solana/tokens/{address}/pools?include=base_token&page=1') for address in self.mint_addresses]
+            pairs = await asyncio.gather(*pairs_container)
+
+    def fetch_pairs(self):
+        if 'data_frames' not in st.session_state:
+            asyncio.run(self.pair_main())
+            # print('already there')
+
+    def NeededData(self,pricedata):
+        for key,value in pricedata.items():
+            token_address = value['address']
+            symbol = value['symbol'].split('/')[0]
+            # st.write(symbol)
+            token_price_info = {
+                'Info': ['Peak Price','Lowest Price','Max DrawDown'],
+                '    5m': [value['5m']['highest_price'],value['5m']['lowest_price'],value['5m']['max_drawdown']],
+                '    10m': [value['10m']['highest_price'],value['10m']['lowest_price'],value['10m']['max_drawdown']],
+                '    15m': [value['15m']['highest_price'],value['15m']['lowest_price'],value['15m']['max_drawdown']]
+            }
+        data_frame = pd.DataFrame(token_price_info)
+        return data_frame,token_address,symbol
+        # st.dataframe(data_frame)
+
+    def slide(self,price_datas):
+        # st.write(st.session_state, 'for session from othere ppage')
+        if 'data_frames' not in st.session_state:
+            st.session_state['data_frames'] = []
+            
+        if 'address_symbol' not in st.session_state:
+            st.session_state['address_symbol'] = []
+        try:
+            # data_frames = st.session_state['data_frames']
+            # address_symbol = st.session_state['address_symbol']
+            data_frames = []
+            # if 'data_frames' not in st.session_state:
+            for pricedata in price_datas:
+                data_frame,address,symbol = self.NeededData(pricedata)
+                # st.write(address)
+                # data_frames.append(data_frame)
+                address_sym = [address,symbol ]
+                st.session_state['data_frames'].append(data_frame)
+                st.session_state['address_symbol'].append(address_sym)
+                # address_symbol.append([address,symbol])
+            
+            if 'slide_index' not in st.session_state:
+                st.session_state['slide_index'] = 0
+
+            
+            def next_slide():
+                if st.session_state.slide_index < len(st.session_state['data_frames']) - 1:
+                    
+                    st.session_state['slide_index'] +=1
+
+            def prev_slide():
+                if st.session_state.slide_index > 0:
+                    st.session_state['slide_index'] -=1
+
+            # st.write(st.session_state['slide_index'], 'is slide index')
+            # st.write(len(st.session_state['data_frames']),'is len of data frame')
+            # st.write(st.session_state['address_symbol'])
+            st.badge(f'Token Address : {st.session_state['address_symbol'][st.session_state['slide_index']][0]}',color='violet')
+            st.badge(f'Symbol : ${st.session_state['address_symbol'][st.session_state['slide_index']][1]}',color='orange')
+            st.dataframe(st.session_state['data_frames'][st.session_state['slide_index']])
+            
+
+            col1,col2,col3 = st.columns([1,2,3])
+            with col1:
+                if st.button('Prev. CA',disabled=st.session_state['slide_index'] == 0):
+                    prev_slide()
+
+            with col2:
+                if st.button('Next CA',disabled=st.session_state['slide_index'] == len(st.session_state['data_frames']) -1 ):
+                    
+                    next_slide()
+                    
+            # st.write(f'Slide {st.session_state['slide_index'] + 1} of {len(st.session_state['data_frames'])}')
+        except:
+            st.error('Session Ended: Analyze Data Again')

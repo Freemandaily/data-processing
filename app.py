@@ -6,7 +6,7 @@ import sys
 from TweetData import processor
 from priceFeed import token_tweeted_analyzor
 from storage import add_to_csv
-
+from TweetData import contractProcessor
 
 
 class search_state():
@@ -17,9 +17,9 @@ search = search_state()
 
 def restore():
        
-    if 'dataframe' in st.session_state:
+    if 'download_dataframe' in st.session_state:
         if st.button('Show Previous Data'):
-            df_data = st.session_state['dataframe']
+            df_data = st.session_state['download_dataframe']
             st.dataframe(df_data)
 
             def convert_for_download(df_data):
@@ -52,7 +52,7 @@ def data_for_drawDown(tweeted_token):
                 continue
             handles_data.append(influencer_data)
     if handles_data:
-        print('cam comput drawdown')
+        print('can comput drawdown')
         st.session_state['handles_data'] = handles_data
     else:
         print('cant comput drawdown')
@@ -69,8 +69,8 @@ with st.sidebar:
     
     st.divider()
     contracts_input = st.text_area('Enter Contracts',placeholder='4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R\n7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr')
-    choose_date = st.date_input(label='Choose A Date',value='today')
-    choose_time = st.time_input('Choose Time',value=None,step=300)
+    choose_date = st.date_input(label='Set A Date',value='today')
+    choose_time = st.time_input('Set Time',value=None,step=300)
     st.divider()
    
     st.subheader('About')
@@ -86,7 +86,7 @@ with st.sidebar:
 st.image('data-extract.png')
 
 
-def loadsearch():
+def loadsearch(process=None):
     if search.search_with == 'handle':
         with st.spinner(f'Loading @{username_url} Handle'):
             userHandler = process.Load_user(username_url,timeframe=timeframe) 
@@ -97,23 +97,34 @@ def loadsearch():
         with st.spinner(f'Processing @{username_url} Tweets'):
             process.fetchTweets()
             tweeted_token_details = process.processTweets()
+            return tweeted_token_details
     elif search.search_with == 'link':
         with st.spinner(f'Processing  Tweets in Url......'):
             process.search_with_id(username_url)
             tweeted_token_details = process.processTweets()
+            return tweeted_token_details
     elif search.search_with == 'Contracts':
         if choose_date and choose_time:
-            combine = datetime.combine(choose_date,choose_time)
-            utc_datetime = combine.replace(tzinfo=pytz.UTC)
-            start_time = utc_datetime.isoformat().replace('+00:12',"z")
+            combine_date_time =  datetime.combine(choose_date,choose_time)
+            # combine = datetime.combine(choose_date,choose_time)
+            # utc_datetime = combine.replace(tzinfo=pytz.UTC)
+            # start_time = utc_datetime.isoformat().replace('+00:12',"z")
         else:
             st.error('Please Choose Date And Time')
             st.stop()
-        with st.spinner(f'Processing  Tweets Containing The Contracts......'):
-            process.search_tweet_with_contract(contracts_input.split('\n'),start_time)
-            tweeted_token_details = process.processTweets()
+        with st.spinner(f'Loading  Contract(s)......'):
+            text_inputs  = contracts_input.split('\n')
+            contracts = [text for text in text_inputs if not text.startswith('0x') and len(text) >= 32]
+            if contracts:
+                process = contractProcessor(contracts,combine_date_time)
+            else:
+                st.error('Please Enter only Solana Mint Token Contract (32 to 42 char)') 
+                st.stop()   
+            return process
+        #   process.search_tweet_with_contract(contracts_input.split('\n'),start_time)
+        #     tweeted_token_details = process.processTweets()
     
-    return tweeted_token_details
+    
     
     
         
@@ -146,56 +157,69 @@ else:
     st.stop()
 
 
+if search.search_with != 'Contracts':
+    if st.button('Analyse'):
+        process = processor()
 
-if st.button('Analyse Tweet'):
-    process = processor()
+        tweeted_token_details = loadsearch(process)
 
-    tweeted_token_details = loadsearch()
+        if 'Error' in tweeted_token_details:
+            st.error(tweeted_token_details['Error'])
+            st.stop()
+        else:
+            st.toast(f'{search.search_with} Tweets Successfully Processed!')  
+        # tweeted_token_details = {'2025-04-22 14:27:35':{'Token_names':['$sol','$ray','$wif','$jup'],'contracts':[]}}
+        
+        # Fetchng tweeted token data
+        with st.spinner('Fetching Tweeted Tokens and Price Datas. Please Wait.....'):
+            analyzor = token_tweeted_analyzor(tweeted_token_details,token_choice)
+        if 'Error' in analyzor:
+            st.error(analyzor['Error'])
+            st.stop()
 
-    if 'Error' in tweeted_token_details:
-        st.error(tweeted_token_details['Error'])
-        st.stop()
-    else:
-        st.toast(f'{search.search_with} Tweets Successfully Processed!')  
-    # tweeted_token_details = {'2025-04-22 14:27:35':{'Token_names':['$sol','$ray','$wif','$jup'],'contracts':[]}}
+        with st.spinner('Storing Tweeted Token(s) Data'):  
+            df_data = add_to_csv(analyzor)  # Adding the tweeted token to cs file
+        if 'Error' in df_data:
+            st.error(df_data['Error'])
+            st.stop()
+        st.success( 'Succesfully Analyzed Tweeted Token(s)',icon="✅")
+        time.sleep(5)
+        st.dataframe(df_data)
+        st.session_state['download_dataframe'] = df_data
+
+
+        def convert_for_download(df_data):
+            return df_data.to_csv().encode("utf-8")
+        csv = convert_for_download(df_data)
+        st.session_state['analyzor'] = analyzor
+
+        
+        st.download_button(
+            label="Download CSV",
+            data=csv,
+            file_name="data.csv",
+            key=1,
+            mime="text/csv",
+            icon=":material/download:"
+        )
+else:
+    process = loadsearch()
+    if 'data_frames' in st.session_state:
+        if st.button('Changed Input?:Rerun'):
+            if 'data_frames' in st.session_state:
+                del st.session_state['data_frames']
+                del st.session_state['address_symbol']
     
-    # Fetchng tweeted token data
-    with st.spinner('Fetching Tweeted Tokens and Price Datas. Please Wait.....'):
-        analyzor = token_tweeted_analyzor(tweeted_token_details,token_choice)
-    if 'Error' in analyzor:
-        st.error(analyzor['Error'])
-        st.stop()
+    process.fetch_pairs()
+    process.process_contracts()
+    price_datas = process.contracts_price_data
+    process.slide(price_datas)
 
-    with st.spinner('Storing Tweeted Token(s) Data'):  
-        df_data = add_to_csv(analyzor)  # Adding the tweeted token to cs file
-    if 'Error' in df_data:
-        st.error(df_data['Error'])
-        st.stop()
-    st.success( 'Succesfully Analyzed Tweeted Token(s)',icon="✅")
-    time.sleep(5)
-    st.dataframe(df_data)
-    st.session_state['dataframe'] = df_data
+# if 'analyzor' in st.session_state:
+#     if st.button('Check DrawDown'):
+#         handles_data = data_for_drawDown(st.session_state['analyzor'])
+#         st.switch_page('drawdown.py')
 
 
-    def convert_for_download(df_data):
-        return df_data.to_csv().encode("utf-8")
-    csv = convert_for_download(df_data)
-    st.session_state['analyzor'] = analyzor
-
-    
-    st.download_button(
-        label="Download CSV",
-        data=csv,
-        file_name="data.csv",
-        key=1,
-        mime="text/csv",
-        icon=":material/download:"
-    )
-
-
-if 'analyzor' in st.session_state:
-    if st.button('Check DrawDown'):
-        handles_data = data_for_drawDown(st.session_state['analyzor'])
-        st.switch_page('drawdown.py')
 
 
