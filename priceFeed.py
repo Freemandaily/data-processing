@@ -5,7 +5,13 @@ from datetime import datetime, timedelta
 import asyncio,aiohttp
 import streamlit as st
 
-moralis = st.secrets['moralis_key']
+
+
+with open('key.json','r') as file:
+    keys = json.load(file)
+    moralis = keys['moralis']
+
+# moralis = st.secrets['moralis_key']
 
 class price_with_interval:
     def __init__(self):
@@ -264,8 +270,8 @@ def Tweet_tokenInfoProcessor(jup_token_datas:dict,tweet_token_detail:dict):
                 if 'Error' in pair_address:
                     print(pair_address['Error'])
                     continue
-                structured_data[date][jupToken['address']] = {'pair':pair_address,
-                                                            'symbol':jupToken['symbol'],
+                structured_data[date][contract] = {'pair':pair_address,
+                                                            #'symbol':jupToken['symbol'],
                                                             'username': username}
                 # structured_data[date][jupToken['address']]['Price_Tweeted_At'] = fetchPrice(pair_address,date,5,timeframe_prices,get_start_price='YES')
                 # structured_data[date][jupToken['address']]['price_5m'] = fetchPrice(pair_address,date,5,timeframe_prices)
