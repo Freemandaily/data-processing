@@ -6,66 +6,12 @@ import asyncio,aiohttp
 import streamlit as st
 
 
-
-with open('key.json','r') as file:
-    keys = json.load(file)
-    moralis = keys['moralis']
-
-# moralis = st.secrets['moralis_key']
+moralis = st.secrets['moralis_key']
 
 class price_with_interval:
     def __init__(self):
         self.token_interval_prices = []
-
-# def fetchPrice(pair,tweetDate,time_frame,timeframe_prices,get_start_price=None): # accepts pair (3) get the price of the token ,
-#     from_date = tweetDate[:10]
-#     st.write(tweetDate)
-#     st.stop()
-#     date_obj = datetime.strptime(from_date, '%Y-%m-%d')
-#     new_date = date_obj + timedelta(days=1)
-#     to_date = new_date.strftime('%Y-%m-%d')
-
-
-#     url = f"https://solana-gateway.moralis.io/token/mainnet/pairs/{pair}/ohlcv?timeframe=5min&currency=usd&fromDate={from_date}&toDate={to_date}&limit=1000"
-
-#     headers = {
-#     "Accept": "application/json",
-#     "X-API-Key": moralis
-#     }
-#     try:
-#         if not timeframe_prices.token_interval_prices:
-#             response = requests.request("GET", url, headers=headers)
-#             if response != 200:
-#                 data = response.json()
-#                 Token_Price_datas = data.get('result',[])
-#                 timeframe_prices.token_interval_prices = Token_Price_datas
-#             else:
-#                 st.error('Requesting Data from Moralis Failed! App Execution Stopped .Please Reload The Page And Try Again')
-#                 st.stop()
-#         else:
-#             Token_Price_datas = timeframe_prices.token_interval_prices
-
-#         for price_data in Token_Price_datas:
-#             moralis_date_obj = datetime.fromisoformat(price_data['timestamp'].replace('Z', '+00:00'))
-#             Moralis_formatted_date = moralis_date_obj.strftime("%Y-%m-%d %H:%M:%S")
-
-#             if get_start_price:
-#                 time_frame_time = tweeted_timeframe(tweetDate)
-#             else:
-#                 time_frame_time = timeFrame(tweetDate,time_frame)
-
-#             if Moralis_formatted_date == time_frame_time:
-#                 open = price_data['open']
-#                 high_price = price_data['high']
-#                 low_price = price_data['low']
-#                 close_price = price_data['close']
-#                 return close_price
-
-#     except Exception as e:
-#         st.error('Failed To Fetch Token Price Data! Please Reload The Page because Execution has Terminated')
-#         st.stop()
-
-
+        
 def fetchPrice(pair,tweeted_date,five_minute,ten_minute,fifteen_minute):
     
     async def fetch_ohlc_and_compute(session,endpoint_req) -> dict:
