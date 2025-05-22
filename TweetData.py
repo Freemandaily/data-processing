@@ -394,6 +394,7 @@ class contractProcessor():
         async with session.get(url,headers=headers) as response:
             try:
                 result = await response.json()
+                st.write(result)
                 data = result['data']['attributes']['pools'][0]
                 pair = data['address']
                 network_id = data['network']['identifier']
