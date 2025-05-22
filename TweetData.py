@@ -13,14 +13,14 @@ import asyncio
 import aiohttp
 import pandas as pd
 
-with open('key.json','r') as file:
-    keys = json.load(file)
-    bearerToken =keys['bearerToken']
+# with open('key.json','r') as file:
+#     keys = json.load(file)
+#     bearerToken =keys['bearerToken']
 
-# try:
-#     bearerToken =st.secrets['bearer_token']
-# except:
-#     bearerToken = os.environ.get('bearerToken')
+try:
+    bearerToken =st.secrets['bearer_token']
+except:
+    bearerToken = os.environ.get('bearerToken')
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
