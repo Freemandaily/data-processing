@@ -1,9 +1,10 @@
 from ast import main
+from multiprocessing import pool
 import time
 from urllib import response
 import tweepy
 import sys
-from datetime import timedelta
+from datetime import datetime,timedelta
 import datetime
 import pytz,re
 import json
@@ -12,12 +13,16 @@ import asyncio
 import aiohttp
 import pandas as pd
 
-bearerToken =st.secrets['bearer_token']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
+
+
+# bearerToken =st.secrets['bearer_token']
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
         self.client =  tweepy.Client(bearerToken)
-        #self.client =  tweepy.Client(bearerToken)
         self.username = None
         self.user = None
         self.user_id = None
@@ -42,7 +47,6 @@ class processor:
             Error_message = {'Error':f'Error: {e}\n.Upgrade Your X Developer Plan or Try Again later'} # handle error according to it error
             return Error_message
         
-    
     # Fetching Ticker and contracts contains in the tweet
     def fetchTicker_Contract(self,tweet_text:str) -> dict:
         contract_patterns = r'\b(0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}|T[1-9A-HJ-NP-Za-km-z]{33})\b'
@@ -59,11 +63,6 @@ class processor:
 
     # Using X API to fetch user tweets
     def fetchTweets(self) -> list:
-        # user_tweets =  [{'created_at':'2025-04-22 14:27:35',
-        #                 'tweet_text':'ths is the man he said that kills $Ray $Sol $jup'},
-        #                 {'created_at':'2025-04-23 14:27:35',
-        #                 'tweet_text':'ths is the man he said that kills $bonk $jto'}
-        #                 ]
         if self.timeframe == 7:
             request_limit = 1
         else:
@@ -81,8 +80,6 @@ class processor:
                 
                 if response.data:
                     for tweet in response.data:
-                        # print(tweet.created_at)
-                        # sys.exit()
                         tweet_dict = {
                             'tweet_id':tweet.id,
                             'tweet_text':tweet.text,
@@ -93,9 +90,7 @@ class processor:
             self.tweets = user_tweets
         except Exception as e:
             Error_message = {'Error':f'Failed To Fetch Tweets Because of  {e}\nUpgrade Your X Developer Plan or Wait For Sometimes'}
-            # return Error_message
             self.tweets = Error_message
-        
         
     # format the data to a suitable data type
     def Reformat(self,fetched_Token_details:list) -> dict:
@@ -119,7 +114,7 @@ class processor:
     def processTweets(self)->dict: # Entry function
         tweets = self.tweets
         if isinstance(tweets,dict) and 'Error' in tweets:
-            return tweets # Error handlig for streamlit
+            return tweets # Error handling for streamlit
         fetched_Token_details = []
     
         if tweets:
@@ -131,17 +126,14 @@ class processor:
                     'date': tweet['created_at']
                 }
                 fetched_Token_details.append(refined_details)
-
             tweeted_Token_details = self.Reformat(fetched_Token_details)
             return tweeted_Token_details
         else :
             Error_message = {'Error':f'Not Able To Process {self.username} Tweets! Please check I'}
             return Error_message
         
-
-    
-
-    def Fetch_Id_username_url(self,url): # This  get tweet id and user using the provided url
+    # Get tweet id and user using the provided url
+    def Fetch_Id_username_url(self,url):
         url = url.lower()
         print(url)
         if url.startswith('https://x.com/'):
@@ -154,16 +146,12 @@ class processor:
                     raise ValueError('Incorrect Tweet Id')
             except ValueError as e:
                 print(f'Make Sure Url Contains Valid Tweet Id ')
-                # stoop the program
                 st.error(f'Make Sure Url Contains Valid Tweet Id ')
                 st.stop()
         else:
             print('Provide A Valid X Url')
             st.error('Provide A Valid X Url')
             st.stop()
-            # stop the program
-           
-        
 
     def search_with_id(self,url):
         tweet_id,username =  self.Fetch_Id_username_url(url)
@@ -173,19 +161,15 @@ class processor:
             for tweet in tweets.data:
                 tweet_dict = {
                     'tweet_text':tweet.text,
-                    'created_at':tweet.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    'created_at':tweet.created_at.strftime("%Y-%m-%d %H:%M"),
                     'username': username
                     }
                 user_tweets.append(tweet_dict)
-            # return user_tweets
             print(user_tweets)
             self.tweets = user_tweets
         except Exception as e:
             Error_message = {'Error':f'Failed To Fetch Tweets Because of  {e}'} # this Error comes because of invali tweet id , configure correctly
             self.tweets = Error_message
-            
-
-
 
     def search_tweet_with_contract(self,text_inputs,start_time):
         user_tweet = [ ]
@@ -218,36 +202,76 @@ class processor:
             st.stop()
 
 
-
 class contractProcessor():
-    
-   
 
-    def __init__(self,mint_addresses:list,date_time):
-        self.mint_addresses = mint_addresses # list
+    def __init__(self,mint_addresses:list,date_time=None):
+        self.mint_addresses = mint_addresses # -> list
         self.pairs = []
         self.tokens_data = []
         self.date_time = date_time
         self.contracts_price_data = []
-
-
+        self.from_timetamp = 0
+        self.to_timestamp = 0
         
-    async def fetch_ohlc_and_compute(self,session,endpoint_req) -> dict:
-        async with session.get(endpoint_req) as response:
+    
+    async def Priceswharehouse(self,session,poolId):
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json"
+        }
+        url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={self.from_timetamp}&to_timestamp={self.to_timestamp}&for_update=false&currency=usd&is_inverted=false'
+        async with session.get(url=url,headers=headers) as response:
+                result = await response.json()
+                datas = result['data']
+                price_data = [value for data in datas for key in ['o','h','l','c'] for value in [data[key]]]
+                dates = [value for data in datas for key in ['dt'] for value in [data[key]]]
+                """
+                This fetch get data from the gecko terminal website,
+                so the time is in GMT which is lagging 1 hour . 
+                Also i some candle are missing in some chart , 
+                below code is used to mitigate it.
+                i have to add 1 hour to  the time. 
+                i only use the time to check if the candle chart start from the self.from_timestamp
+                """
+                from datetime import datetime,timedelta
+                new_dates_timestamp = [ ]
+                for date in dates:
+                    dt = datetime.fromisoformat(date.replace('Z', '+00:00'))
+                    unix_timestamp = int(dt.timestamp())
+                    new_dates_timestamp.append(unix_timestamp)
+                return price_data,new_dates_timestamp
+
+    async def fetch_ohlc_and_compute(self,session,poolId,network):
+            
             try:
-                response_data = await response.json()
-                price_data = response_data['data']['attributes']['ohlcv_list']
-                removable_index = [0,5]
-                price_data = [price for subprice in price_data for index, price in enumerate(subprice) if index not in removable_index]
-            
-            
+                task_price  = asyncio.create_task(self.Priceswharehouse(session,poolId))
+                price_data,new_date_timestamp = await task_price
+                """
+                This checks if the starting candle timestamp is there
+                if the candle is there m  we take only the closing price and discard the candle
+                else we keep the candle and start at the open price
+                Rem, this is from website api , the data formation varies
+                """
+                if self.from_timetamp in new_date_timestamp:
+                    entry_price = price_data[4]
+                    price_data = price_data[4:]
+                else:
+                    entry_price = price_data[0]
+                
+                if self.to_timestamp in new_date_timestamp: # Some request gives extra timestamp, i handle it here
+                    price_data = price_data[:-4]
+                
+                close_price = price_data[-1] 
+                peak_price = round(max(price_data),7)
+                lowest_price = round(min(price_data),7)
                 max_so_far = price_data[0]
-                max_drawdown  = 0
-                max_price = max(price_data)
-                min_price = min(price_data)
+                max_drawdown  = 0 
+                
+                percentage_change = str(round(((close_price - entry_price)/entry_price) * 100,3)) + '%'
+                entry_to_peak = str(round(((peak_price - entry_price) /entry_price) * 100,3)) +'%' 
             except:
                 st.error('Please Choose Timeframe Within Token Traded Prices')
-                # st.stop()
+               
             
             try:
                 for price in price_data:
@@ -255,165 +279,207 @@ class contractProcessor():
                         max_so_far = price
                     drawadown = (( price - max_so_far) / max_so_far) * 100
                     max_drawdown = min(drawadown,max_drawdown)
-                    
-                price_info = {'highest_price': round(max_price,7),
-                            'lowest_price':round(min_price,7),
-                            'max_drawdown':str(round(max_drawdown,3)) +'%'
+
+                price_info = {'Entry_Price': round(entry_price,7),
+                            'Price':round(close_price,7),
+                            '%_Change':percentage_change,
+                            # DrawDown,
+                            'Peak_Price':peak_price,
+                            '%_Entry_to_Peak': entry_to_peak,
+                            'lowest_Price' : lowest_price,
+                            'Max_Drawdown': round(max_drawdown,7)
                             }
                 return price_info
             except Exception as e:
                 st.error('Please Choose Timeframe Within Token Traded Pricess')
 
-        
-
-    async def gecko_price_fetch(self,session,pair,five_timeframe_stamp,ten_timeframe_stamp,fifteen_timeframe_stamp) -> dict:
+   
+    async def gecko_price_fetch(self,session,timeframe,poolId,pair=None,network=None) -> dict:
         try:
-            task1 = asyncio.create_task(self.fetch_ohlc_and_compute(session,f'https://api.geckoterminal.com/api/v2/networks/solana/pools/{pair}/ohlcv/minute?aggregate=1&before_timestamp={int(five_timeframe_stamp)}&limit=5&currency=usd&token=base'))
-            task2 = asyncio.create_task(self.fetch_ohlc_and_compute(session,f'https://api.geckoterminal.com/api/v2/networks/solana/pools/{pair}/ohlcv/minute?aggregate=1&before_timestamp={int(ten_timeframe_stamp)}&limit=10&currency=usd&token=base'))
-            task3 = asyncio.create_task(self.fetch_ohlc_and_compute(session,f'https://api.geckoterminal.com/api/v2/networks/solana/pools/{pair}/ohlcv/minute?aggregate=1&before_timestamp={int(fifteen_timeframe_stamp)}&limit=15&currency=usd&token=base'))
-            
-            five_minutes_task = await task1
-            ten_minutes_task = await task2
-            fifteen_minutes_task = await task3
-            
+            task1 = asyncio.create_task(self.fetch_ohlc_and_compute(session,poolId,network)) 
+            time_frame_Task = await task1
+            if int(timeframe) > 60:
+                    hour = str(timeframe //60)
+                    minutes = timeframe %60
+                    print(f'{hour}:{minutes}m')
+                    
+                    timeframe = f'{hour}:{minutes}m'  if minutes > 0  else f'{hour}hr(s)' 
+            else:
+                timeframe = f'{timeframe}m'
+
             pair_data_info = {pair:{ 
-                '5m': five_minutes_task,
-                '10m': ten_minutes_task,
-                '15m': fifteen_minutes_task
+                f'{timeframe}': time_frame_Task
             }}
             return pair_data_info
         except Exception as e:
             st.error(f'Please Choose Timeframe Within Token Traded Prices')
 
-
     def process_date_time(self,added_minute):
         from datetime import datetime
         combine = self.date_time
+        added_minute = added_minute + 1
         time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S")
-        processed_date_time = time_object + timedelta(minutes=added_minute)
-        added_date_time = processed_date_time.timestamp()
-        
-        return added_date_time # timestamp
+        processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
+        from_timestamp = time_object.timestamp()
+        to_timestamp = processed_date_time.timestamp()
+        self.from_timetamp = int(from_timestamp)
+        self.to_timestamp = int(to_timestamp)
 
-    async def main(self,five_timeframe_stamp,ten_timeframe_stamp,fifteen_timeframe_stamp):
+    async def main(self,timeframe): 
         async with aiohttp.ClientSession() as session:
-            task_container = [self.gecko_price_fetch(session,pair,five_timeframe_stamp,ten_timeframe_stamp,fifteen_timeframe_stamp) for pair in self.pairs]
+            task_container = [self.gecko_price_fetch(session,timeframe,data['poolId'],pair=data['pair'],network=data['network_id']) for data in self.tokens_data]
             contracts_price_data = await asyncio.gather(*task_container)
-            # print(contracts_price_data)
             self.contracts_price_data = contracts_price_data
             
         for data in self.tokens_data:
             pair = data['pair']
-            # print(pair)
-            for element in self.contracts_price_data:
+            for element in self.contracts_price_data: # add element[pair][network] = data[network]
                 try:
                     element[pair]['address'] = data['address']
                     element[pair]['symbol'] = data['symbol']
+                    element[pair]['network'] = data['network_id']
                 except:
                     pass
         
+    def process_contracts(self,timeframe): 
+        self.process_date_time(timeframe)
+        asyncio.run(self.main(timeframe))
     
-    def process_contracts(self):
-        five_timeframe_stamp = self.process_date_time(5)
-        ten_timeframe_stamp = self.process_date_time(10)
-        fifteen_timeframe_stamp= self.process_date_time(15)
-        if 'data_frames' not in st.session_state:
-            asyncio.run(self.main(five_timeframe_stamp,ten_timeframe_stamp,fifteen_timeframe_stamp))
+    async def Fetch_PoolId_TokenId(self,session,network_id,pair):
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json"
+        }
+        url = f"https://app.geckoterminal.com/api/p1/{network_id}/pools/{pair}?include=dex%2Cdex.network.explorers%2Cdex_link_services%2Cnetwork_link_services%2Cpairs%2Ctoken_link_services%2Ctokens.token_security_metric%2Ctokens.token_social_metric%2Ctokens.tags%2Cpool_locked_liquidities&base_token=0"
+        async with session.get(url,headers=headers) as response:
+           try:
+                result = await response.json()
+                data = result['data']
+                poolId = data['id']
+                pairId = result['data']['relationships']['pairs']['data'][0]['id']
+                return poolId,pairId
+           except:
+               print('Issue getting the poolId')
 
-    async def pair(self,session,address,pair_endpoint):
+    async  def fetchNetworkId(self,session,address):
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json"
+        }
+        url = f'https://app.geckoterminal.com/api/p1/search?query={address}'
+        async with session.get(url,headers=headers) as response:
+            try:
+                result = await response.json()
+                data = result['data']['attributes']['pools'][0]
+                pair = data['address']
+                network_id = data['network']['identifier']
+                return network_id
+            except:
+                st.write('Unable To Request For Contract Info From GeckoTerminal')
+
+    # async def pair(self,session,address,pair_endpoint):
+    async def pair(self,session,address):
         try:
+            task_id = asyncio.create_task(self.fetchNetworkId(session,address))
+            network_id = await task_id
+            pair_endpoint = f'https://api.geckoterminal.com/api/v2/networks/{network_id}/tokens/{address}/pools?include=base_token&page=1'
             async with session.get(pair_endpoint) as response:
                 try:
                     result = await response.json()
                     pair_address = result['data'][0]['attributes']['address']
+                    task_poolId = asyncio.create_task(self.Fetch_PoolId_TokenId(session,network_id,pair_address))
+                    poolId,pairId = await task_poolId
                     symbol = result['data'][0]['attributes']['name']
-                    token_data = {'address':address,
+                    token_data = {'address':address,  #add 'network_id' = network_id
                                 'pair':pair_address,
-                                'symbol':symbol}
+                                'symbol':symbol,
+                                'network_id':network_id,
+                                'poolId': f'{poolId}/{pairId}'}
                     self.pairs.append(pair_address)
                     self.tokens_data.append(token_data)
                 except ValueError as e:
-                    st.error(f'Check If This Mint Address Is Correct : {e}')
+                    st.error(f'Check If This Contract Address Is Correct : {e}')
         except :
-            st.error('Gecko Rate Limited : Try AGain')
-
+            st.error('Check If This Mint Address Is Correct: Unable to fetch Pair Info')
+    
     async def pair_main(self):
-        async with aiohttp.ClientSession() as session:
-            pairs_container = [self.pair(session,address,f'https://api.geckoterminal.com/api/v2/networks/solana/tokens/{address}/pools?include=base_token&page=1') for address in self.mint_addresses]
+        async with aiohttp.ClientSession() as session:  
+            pairs_container = [self.pair(session,address) for address in self.mint_addresses]
             pairs = await asyncio.gather(*pairs_container)
 
-    def fetch_pairs(self):
-        if 'data_frames' not in st.session_state:
+    def fetch_pairs(self): 
+        if 'data_frames' not in st.session_state: # so that slide dont refetch data again
             asyncio.run(self.pair_main())
-            # print('already there')
 
-    def NeededData(self,pricedata):
+    def NeededData(self,pricedata,timeframe):
         for key,value in pricedata.items():
             token_address = value['address']
             symbol = value['symbol'].split('/')[0]
-            # st.write(symbol)
-            token_price_info = {
-                'Info': ['Peak Price','Lowest Price','Max DrawDown'],
-                '    5m': [value['5m']['highest_price'],value['5m']['lowest_price'],value['5m']['max_drawdown']],
-                '    10m': [value['10m']['highest_price'],value['10m']['lowest_price'],value['10m']['max_drawdown']],
-                '    15m': [value['15m']['highest_price'],value['15m']['lowest_price'],value['15m']['max_drawdown']]
-            }
-        data_frame = pd.DataFrame(token_price_info)
-        return data_frame,token_address,symbol
-        # st.dataframe(data_frame)
+            network = value['network']
+            if 'token_price_info' not in st.session_state:
+                st.session_state['token_price_info'] = {}
 
-    def slide(self,price_datas):
-        # st.write(st.session_state, 'for session from othere ppage')
+            if token_address not in st.session_state['token_price_info']:
+                st.session_state['token_price_info'][token_address] = { 
+                    'Info': ['Entry Price','Price','% Change','Peak Price','% Entry to Peak','lowest Price','Max Drawdown']
+                }
+
+            if int(timeframe) > 60:
+                    hour = str(timeframe //60)
+                    minutes = timeframe %60
+                    print(f'{hour}:{minutes}m')
+                    
+                    timeframe = f'{hour}:{minutes}m'  if minutes > 0  else f'{hour}hr(s)' 
+            else:
+                timeframe = f'{timeframe}m'  ;  
+            st.session_state['token_price_info'][token_address][f'{timeframe}'] = [value[f'{timeframe}']['Entry_Price'],
+                                                                                    value[f'{timeframe}']['Price'],
+                                                                                    value[f'{timeframe}']['%_Change'],
+                                                                                    value[f'{timeframe}']['Peak_Price'],
+                                                                                    value[f'{timeframe}']['%_Entry_to_Peak'],
+                                                                                    value[f'{timeframe}']['lowest_Price'],
+                                                                                    value[f'{timeframe}']['Max_Drawdown']
+                                                                                    ]
+        data_frame = pd.DataFrame(st.session_state['token_price_info'][token_address])
+        return data_frame,token_address,symbol,network
+
+    def slide(self,price_datas:list,timeframe):
         if 'data_frames' not in st.session_state:
-            st.session_state['data_frames'] = []
+            st.session_state['data_frames'] = { }
             
         if 'address_symbol' not in st.session_state:
             st.session_state['address_symbol'] = []
         try:
-            # data_frames = st.session_state['data_frames']
-            # address_symbol = st.session_state['address_symbol']
             data_frames = []
-            # if 'data_frames' not in st.session_state:
             for pricedata in price_datas:
-                data_frame,address,symbol = self.NeededData(pricedata)
-                # st.write(address)
-                # data_frames.append(data_frame)
-                address_sym = [address,symbol ]
-                st.session_state['data_frames'].append(data_frame)
+                data_frame,address,symbol,network = self.NeededData(pricedata,timeframe)
+                address_sym = [address,symbol,network ]
+                st.session_state['data_frames'][address] = data_frame
                 st.session_state['address_symbol'].append(address_sym)
-                # address_symbol.append([address,symbol])
-            
             if 'slide_index' not in st.session_state:
                 st.session_state['slide_index'] = 0
-
             
             def next_slide():
                 if st.session_state.slide_index < len(st.session_state['data_frames']) - 1:
-                    
                     st.session_state['slide_index'] +=1
 
             def prev_slide():
                 if st.session_state.slide_index > 0:
                     st.session_state['slide_index'] -=1
 
-            # st.write(st.session_state['slide_index'], 'is slide index')
-            # st.write(len(st.session_state['data_frames']),'is len of data frame')
-            # st.write(st.session_state['address_symbol'])
+            address = st.session_state['address_symbol'][st.session_state['slide_index']][0]
             st.badge(f'Token Address : {st.session_state['address_symbol'][st.session_state['slide_index']][0]}',color='violet')
             st.badge(f'Symbol : ${st.session_state['address_symbol'][st.session_state['slide_index']][1]}',color='orange')
-            st.dataframe(st.session_state['data_frames'][st.session_state['slide_index']])
-            
+            st.badge(f'Network : {st.session_state['address_symbol'][st.session_state['slide_index']][2]}',color='green')
+            st.dataframe(st.session_state['data_frames'][address])
 
             col1,col2,col3 = st.columns([1,2,3])
             with col1:
                 if st.button('Prev. CA',disabled=st.session_state['slide_index'] == 0):
                     prev_slide()
-
             with col2:
-                if st.button('Next CA',disabled=st.session_state['slide_index'] == len(st.session_state['data_frames']) -1 ):
+                if st.button('Next CA',disabled=st.session_state['slide_index'] == len(st.session_state['data_frames']) -1 ) :
                     
                     next_slide()
-                    
-            # st.write(f'Slide {st.session_state['slide_index'] + 1} of {len(st.session_state['data_frames'])}')
         except:
             st.error('Session Ended: Analyze Data Again')
