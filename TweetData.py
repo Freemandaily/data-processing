@@ -371,7 +371,7 @@ class contractProcessor():
         headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
                 "Accept": "application/json, text/plain, */*",
-                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Encoding": "gzip, deflate, zstd",
                 "Accept-Language": "en-US,en;q=0.9",
                 "Origin": "https://www.geckoterminal.com",
                 "Referer": "https://www.geckoterminal.com/",
@@ -404,7 +404,7 @@ class contractProcessor():
         headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
                 "Accept": "application/json, text/plain, */*",
-                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Encoding": "gzip, deflate, zstd",
                 "Accept-Language": "en-US,en;q=0.9",
                 "Origin": "https://www.geckoterminal.com",
                 "Referer": "https://www.geckoterminal.com/",
