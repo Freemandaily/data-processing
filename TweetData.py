@@ -13,12 +13,12 @@ import asyncio
 import aiohttp
 import pandas as pd
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
 
-bearerToken =st.secrets['bearer_token']
+# bearerToken =st.secrets['bearer_token']
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -221,7 +221,7 @@ class contractProcessor():
         # }
 
         headers = {
-           "authority": "app.geckoterminal.com",
+            "authority": "app.geckoterminal.com",
             "accept": "application/json, text/plain, /",
             "origin": "https://www.geckoterminal.com",
             "referer": "https://www.geckoterminal.com/",
@@ -384,11 +384,11 @@ class contractProcessor():
         #     "Accept": "application/json"
         # }
         headers = {
-           "authority": "app.geckoterminal.com",
+            "authority": "app.geckoterminal.com",
             "accept": "application/json, text/plain, /",
             "origin": "https://www.geckoterminal.com",
             "referer": "https://www.geckoterminal.com/",
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0""
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
         }
         url = f'https://app.geckoterminal.com/api/p1/search?query={address}'
         async with session.get(url,headers=headers) as response:
