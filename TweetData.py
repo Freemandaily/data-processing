@@ -13,13 +13,14 @@ import asyncio
 import aiohttp
 import pandas as pd
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
-
-# bearerToken =st.secrets['bearer_token']
-bearerToken = os.environ.get('bearerToken')
+# try:
+#     bearerToken =st.secrets['bearer_token']
+# except:
+#     bearerToken = os.environ.get('bearerToken')
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -251,7 +252,9 @@ class contractProcessor():
         #     "Priority": "u=1, i"
         #     }
         url = f"https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={self.from_timetamp}&to_timestamp={self.to_timestamp}&for_update=false&currency=usd&is_inverted=false"
-        async with session.get(url=url,headers=headers) as response:
+        
+        try:
+            async with session.get(url=url,headers=headers) as response:
                 result = await response.json()
                 datas = result['data']
                 price_data = [value for data in datas for key in ['o','h','l','c'] for value in [data[key]]]
@@ -271,6 +274,8 @@ class contractProcessor():
                     unix_timestamp = int(dt.timestamp())
                     new_dates_timestamp.append(unix_timestamp)
                 return price_data,new_dates_timestamp
+        except Exception as e:
+            st.error(f"Cant Fetch Price.Issue: {e}")
 
     async def fetch_ohlc_and_compute(self,session,poolId,network):
             
@@ -436,7 +441,12 @@ class contractProcessor():
                 data = result['data']['attributes']['pools'][0]
                 pair = data['address']
                 network_id = data['network']['identifier']
-                return network_id
+                tokens = data['tokens']
+                for token in tokens: # used for fetching token symbol for redundancy
+                    if token['is_base_token'] == True:
+                        symbol = token['symbol']
+                        break
+                return network_id,pair,symbol
             except Exception as e:
                 st.error(f'Unable To Request For Contract Info From GeckoTerminal issue {e}')
 
@@ -444,16 +454,20 @@ class contractProcessor():
     async def pair(self,session,address):
         try:
             task_id = asyncio.create_task(self.fetchNetworkId(session,address))
-            network_id = await task_id
+            network_id,pair,symbol = await task_id
             pair_endpoint = f'https://api.geckoterminal.com/api/v2/networks/{network_id}/tokens/{address}/pools?include=base_token&page=1'
             async with session.get(pair_endpoint) as response:
                 try:
                     result = await response.json()
                     # st.write(result)
-                    pair_address = result['data'][0]['attributes']['address']
+                    if result['data']:
+                        pair_address = result['data'][0]['attributes']['address']
+                        symbol = result['data'][0]['attributes']['name']
+                    else:
+                        pair_address = pair  
+                        symbol = f"{symbol}/Token"
                     task_poolId = asyncio.create_task(self.Fetch_PoolId_TokenId(session,network_id,pair_address))
                     poolId,pairId = await task_poolId
-                    symbol = result['data'][0]['attributes']['name']
                     token_data = {'address':address,  #add 'network_id' = network_id
                                 'pair':pair_address,
                                 'symbol':symbol,
