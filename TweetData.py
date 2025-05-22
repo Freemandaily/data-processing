@@ -221,19 +221,10 @@ class contractProcessor():
         # }
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
             "Accept": "application/json, text/plain, */*",
-            "Accept-Encoding": "gzip, deflate, zstd",  # Removed 'br' to avoid Brotli
-            "Accept-Language": "en-US,en;q=0.9",
-            "Origin": "https://www.geckoterminal.com",
-            "Referer": "https://www.geckoterminal.com/",
-            "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
-            "Sec-CH-UA-Mobile": "?0",
-            "Sec-CH-UA-Platform": '"Windows"',
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-site",
-            "Priority": "u=1, i"
+            "Accept-Encoding": "gzip, deflate",
+            "Accept-Language": "en-US,en;q=0.9"
             }
         url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={self.from_timetamp}&to_timestamp={self.to_timestamp}&for_update=false&currency=usd&is_inverted=false'
         async with session.get(url=url,headers=headers) as response:
@@ -368,19 +359,10 @@ class contractProcessor():
         # }
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
             "Accept": "application/json, text/plain, */*",
-            "Accept-Encoding": "gzip, deflate, zstd",  # Removed 'br' to avoid Brotli
-            "Accept-Language": "en-US,en;q=0.9",
-            "Origin": "https://www.geckoterminal.com",
-            "Referer": "https://www.geckoterminal.com/",
-            "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
-            "Sec-CH-UA-Mobile": "?0",
-            "Sec-CH-UA-Platform": '"Windows"',
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-site",
-            "Priority": "u=1, i"
+            "Accept-Encoding": "gzip, deflate",
+            "Accept-Language": "en-US,en;q=0.9"
             }
         url = f"https://app.geckoterminal.com/api/p1/{network_id}/pools/{pair}?include=dex%2Cdex.network.explorers%2Cdex_link_services%2Cnetwork_link_services%2Cpairs%2Ctoken_link_services%2Ctokens.token_security_metric%2Ctokens.token_social_metric%2Ctokens.tags%2Cpool_locked_liquidities&base_token=0"
         async with session.get(url,headers=headers) as response:
@@ -400,19 +382,10 @@ class contractProcessor():
         #     "Accept": "application/json"
         # }
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
             "Accept": "application/json, text/plain, */*",
-            "Accept-Encoding": "gzip, deflate, zstd",  # Removed 'br' to avoid Brotli
-            "Accept-Language": "en-US,en;q=0.9",
-            "Origin": "https://www.geckoterminal.com",
-            "Referer": "https://www.geckoterminal.com/",
-            "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
-            "Sec-CH-UA-Mobile": "?0",
-            "Sec-CH-UA-Platform": '"Windows"',
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-site",
-            "Priority": "u=1, i"
+            "Accept-Encoding": "gzip, deflate",
+            "Accept-Language": "en-US,en;q=0.9"
         }
         url = f'https://app.geckoterminal.com/api/p1/search?query={address}'
         async with session.get(url,headers=headers) as response:
