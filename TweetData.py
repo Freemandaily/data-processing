@@ -216,7 +216,7 @@ class contractProcessor():
     
     async def Priceswharehouse(self,session,poolId):
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "User-Agent": "Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99",
             "Accept": "application/json"
         }
         url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={self.from_timetamp}&to_timestamp={self.to_timestamp}&for_update=false&currency=usd&is_inverted=false'
@@ -347,7 +347,7 @@ class contractProcessor():
     
     async def Fetch_PoolId_TokenId(self,session,network_id,pair):
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "User-Agent": "Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99",
             "Accept": "application/json"
         }
         url = f"https://app.geckoterminal.com/api/p1/{network_id}/pools/{pair}?include=dex%2Cdex.network.explorers%2Cdex_link_services%2Cnetwork_link_services%2Cpairs%2Ctoken_link_services%2Ctokens.token_security_metric%2Ctokens.token_social_metric%2Ctokens.tags%2Cpool_locked_liquidities&base_token=0"
@@ -363,7 +363,7 @@ class contractProcessor():
 
     async  def fetchNetworkId(self,session,address):
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "User-Agent": "Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99",
             "Accept": "application/json"
         }
         url = f'https://app.geckoterminal.com/api/p1/search?query={address}'
