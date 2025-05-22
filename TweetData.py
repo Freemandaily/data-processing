@@ -223,7 +223,7 @@ class contractProcessor():
         headers = {
             "authority": "app.geckoterminal.com",
             "accept": "application/json, text/plain, /",
-            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-encoding": "gzip, deflate, zstd",
             "accept-language": "en-US,en;q=0.9",
             "origin": "https://www.geckoterminal.com",
             "referer": "https://www.geckoterminal.com/",
@@ -372,7 +372,7 @@ class contractProcessor():
         headers = {
                 "authority": "app.geckoterminal.com",
                 "accept": "application/json, text/plain, /",
-                "accept-encoding": "gzip, deflate, br, zstd",
+                "accept-encoding": "gzip, deflate, zstd",
                 "accept-language": "en-US,en;q=0.9",
                 "origin": "https://www.geckoterminal.com",
                 "referer": "https://www.geckoterminal.com/",
@@ -405,7 +405,7 @@ class contractProcessor():
         headers = {
                 "authority": "app.geckoterminal.com",
                 "accept": "application/json, text/plain, /",
-                "accept-encoding": "gzip, deflate, br, zstd",
+                "accept-encoding": "gzip, deflate, zstd",
                 "accept-language": "en-US,en;q=0.9",
                 "origin": "https://www.geckoterminal.com",
                 "referer": "https://www.geckoterminal.com/",
