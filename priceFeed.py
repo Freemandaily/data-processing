@@ -8,9 +8,9 @@ from TweetData import contractProcessor
 
 
 
-with open('key.json','r') as file:
-    keys = json.load(file)
-    moralis = keys['moralis']
+# with open('key.json','r') as file:
+#     keys = json.load(file)
+#     moralis = keys['moralis']
 
 # moralis = st.secrets['moralis_key']
 
