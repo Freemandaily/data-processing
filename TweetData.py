@@ -13,13 +13,12 @@ import asyncio
 import aiohttp
 import pandas as pd
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
 
 # bearerToken =st.secrets['bearer_token']
-bearerToken = os.environ.get('bearerToken')
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -300,7 +299,7 @@ class contractProcessor():
                 
                 percentage_change = str(round(((close_price - entry_price)/entry_price) * 100,3)) + '%'
                 entry_to_peak = str(round(((peak_price - entry_price) /entry_price) * 100,3)) +'%' 
-                except Exception as e:
+            except:
                 st.error(f"Please Choose Timeframe Within Token Traded Prices{e}")
                
             
@@ -449,6 +448,7 @@ class contractProcessor():
             async with session.get(pair_endpoint) as response:
                 try:
                     result = await response.json()
+                    st.write(result)
                     pair_address = result['data'][0]['attributes']['address']
                     task_poolId = asyncio.create_task(self.Fetch_PoolId_TokenId(session,network_id,pair_address))
                     poolId,pairId = await task_poolId
@@ -463,7 +463,7 @@ class contractProcessor():
                 except ValueError as e:
                     st.error(f'Check If This Contract Address Is Correct : {e}')
         except Exception as e:
-            st.error(f'Check If This Mint Address Is Correct: Unable to fetch Pair Info {e}')
+            st.error(f'Check If This Mint Address Is Correct: Unable to fetch Pair Info{e}')
     
     async def pair_main(self):
         async with aiohttp.ClientSession() as session:  
