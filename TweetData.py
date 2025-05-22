@@ -7,18 +7,20 @@ import sys
 from datetime import datetime,timedelta
 import datetime
 import pytz,re
-import json
+import json,os
 import streamlit as st
 import asyncio 
 import aiohttp
 import pandas as pd
 
-with open('key.json','r') as file:
-    keys = json.load(file)
-    bearerToken =keys['bearerToken']
+
+# with open('key.json','r') as file:
+#     keys = json.load(file)
+#     bearerToken =keys['bearerToken']
 
 
 # bearerToken =st.secrets['bearer_token']
+bearerToken = os.get('bearerToken')
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
