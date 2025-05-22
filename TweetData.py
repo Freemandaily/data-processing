@@ -13,12 +13,12 @@ import asyncio
 import aiohttp
 import pandas as pd
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
 
-bearerToken =st.secrets['bearer_token']
+# bearerToken =st.secrets['bearer_token']
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -393,7 +393,7 @@ class contractProcessor():
                 pairId = result['data']['relationships']['pairs']['data'][0]['id']
                 return poolId,pairId
            except Exception as e:
-               st.error(f'Issue getting the poolId{e}',)
+               st.error(f'Issue getting the poolId{e}')
 
     async  def fetchNetworkId(self,session,address):
         # 
