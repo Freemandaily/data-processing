@@ -13,12 +13,12 @@ import asyncio
 import aiohttp
 import pandas as pd
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
 
-bearerToken =st.secrets['bearer_token']
+# bearerToken =st.secrets['bearer_token']
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -215,10 +215,18 @@ class contractProcessor():
         
     
     async def Priceswharehouse(self,session,poolId):
+        # headers = {
+        #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        #     "Accept": "application/json"
+        # }
+
         headers = {
-            "User-Agent": "Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99",
-            "Accept": "application/json"
-        }
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+                "Accept": "application/json",
+                "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
+                "Sec-CH-UA-Platform": '"Windows"',
+                "Sec-CH-UA-Mobile": "?0"
+            }
         url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={self.from_timetamp}&to_timestamp={self.to_timestamp}&for_update=false&currency=usd&is_inverted=false'
         async with session.get(url=url,headers=headers) as response:
                 result = await response.json()
@@ -346,9 +354,17 @@ class contractProcessor():
         asyncio.run(self.main(timeframe))
     
     async def Fetch_PoolId_TokenId(self,session,network_id,pair):
+        # headers = {
+        #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        #     "Accept": "application/json"
+        # }
+
         headers = {
-            "User-Agent": "Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99",
-            "Accept": "application/json"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+            "Accept": "application/json",
+            "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
+            "Sec-CH-UA-Platform": '"Windows"',
+            "Sec-CH-UA-Mobile": "?0"
         }
         url = f"https://app.geckoterminal.com/api/p1/{network_id}/pools/{pair}?include=dex%2Cdex.network.explorers%2Cdex_link_services%2Cnetwork_link_services%2Cpairs%2Ctoken_link_services%2Ctokens.token_security_metric%2Ctokens.token_social_metric%2Ctokens.tags%2Cpool_locked_liquidities&base_token=0"
         async with session.get(url,headers=headers) as response:
@@ -362,9 +378,17 @@ class contractProcessor():
                print('Issue getting the poolId')
 
     async  def fetchNetworkId(self,session,address):
+        # 
+        # headers = {
+        #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        #     "Accept": "application/json"
+        # }
         headers = {
-            "User-Agent": "Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99",
-            "Accept": "application/json"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+            "Accept": "application/json",
+            "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
+            "Sec-CH-UA-Platform": '"Windows"',
+            "Sec-CH-UA-Mobile": "?0"
         }
         url = f'https://app.geckoterminal.com/api/p1/search?query={address}'
         async with session.get(url,headers=headers) as response:
