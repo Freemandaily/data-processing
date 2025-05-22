@@ -287,8 +287,8 @@ class contractProcessor():
                 
                 percentage_change = str(round(((close_price - entry_price)/entry_price) * 100,3)) + '%'
                 entry_to_peak = str(round(((peak_price - entry_price) /entry_price) * 100,3)) +'%' 
-            except:
-                st.error('Please Choose Timeframe Within Token Traded Prices')
+            except Exception as e:
+                st.error(f"Please Choose Timeframe Within Token Traded Prices{e}")
                
             
             try:
