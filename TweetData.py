@@ -300,8 +300,8 @@ class contractProcessor():
                 
                 percentage_change = str(round(((close_price - entry_price)/entry_price) * 100,3)) + '%'
                 entry_to_peak = str(round(((peak_price - entry_price) /entry_price) * 100,3)) +'%' 
-            except:
-                st.error('Please Choose Timeframe Within Token Traded Prices')
+                except Exception as e:
+                st.error(f"Please Choose Timeframe Within Token Traded Prices{e}")
                
             
             try:
@@ -322,7 +322,7 @@ class contractProcessor():
                             }
                 return price_info
             except Exception as e:
-                st.error('Please Choose Timeframe Within Token Traded Pricess')
+                st.error(f"Please Choose Timeframe Within Token Traded Pricess{e}")
 
    
     async def gecko_price_fetch(self,session,timeframe,poolId,pair=None,network=None) -> dict:
@@ -343,7 +343,7 @@ class contractProcessor():
             }}
             return pair_data_info
         except Exception as e:
-            st.error(f'Please Choose Timeframe Within Token Traded Prices')
+            st.error(f"Please Choose Timeframe Within Token Traded Prices{e}")
 
     def process_date_time(self,added_minute):
         from datetime import datetime
@@ -463,7 +463,7 @@ class contractProcessor():
                 except ValueError as e:
                     st.error(f'Check If This Contract Address Is Correct : {e}')
         except Exception as e:
-            st.error(f'Check If This Mint Address Is Correct: Unable to fetch Pair Info{e}')
+            st.error(f'Check If This Mint Address Is Correct: Unable to fetch Pair Info {e}')
     
     async def pair_main(self):
         async with aiohttp.ClientSession() as session:  
