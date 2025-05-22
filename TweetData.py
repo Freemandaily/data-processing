@@ -13,12 +13,12 @@ import asyncio
 import aiohttp
 import pandas as pd
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
 
-bearerToken =st.secrets['bearer_token']
+# bearerToken =st.secrets['bearer_token']
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -423,8 +423,8 @@ class contractProcessor():
                     self.tokens_data.append(token_data)
                 except ValueError as e:
                     st.error(f'Check If This Contract Address Is Correct : {e}')
-        except :
-            st.error('Check If This Mint Address Is Correct: Unable to fetch Pair Info')
+        except Exception as e:
+            st.error('Check If This Mint Address Is Correct: Unable to fetch Pair Info',e)
     
     async def pair_main(self):
         async with aiohttp.ClientSession() as session:  
