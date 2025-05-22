@@ -7,20 +7,18 @@ import sys
 from datetime import datetime,timedelta
 import datetime
 import pytz,re
-import json,os
+import json
 import streamlit as st
 import asyncio 
 import aiohttp
 import pandas as pd
 
-
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
 
 # bearerToken =st.secrets['bearer_token']
-bearerToken = os.environ.get('bearerToken')
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -217,10 +215,24 @@ class contractProcessor():
         
     
     async def Priceswharehouse(self,session,poolId):
+        # headers = {
+        #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        #     "Accept": "application/json"
+        # }
+
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "application/json"
-        }
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0",
+                "Accept": "application/json",
+                "Accept-Language": "en-US,en;q=0.5",
+                "Accept-Encoding": "gzip, deflate",
+                "Referer": "https://www.geckoterminal.com/",  # Important: sometimes required
+                "Origin": "https://www.geckoterminal.com",
+                "Connection": "keep-alive",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin"
+            }
+
 
         # headers = {
         #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
@@ -237,7 +249,7 @@ class contractProcessor():
         #     "Sec-Fetch-Site": "same-site",
         #     "Priority": "u=1, i"
         #     }
-        url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={self.from_timetamp}&to_timestamp={self.to_timestamp}&for_update=false&currency=usd&is_inverted=false'
+        url = f"https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={self.from_timetamp}&to_timestamp={self.to_timestamp}&for_update=false&currency=usd&is_inverted=false"
         async with session.get(url=url,headers=headers) as response:
                 result = await response.json()
                 datas = result['data']
@@ -287,8 +299,8 @@ class contractProcessor():
                 
                 percentage_change = str(round(((close_price - entry_price)/entry_price) * 100,3)) + '%'
                 entry_to_peak = str(round(((peak_price - entry_price) /entry_price) * 100,3)) +'%' 
-            except Exception as e:
-                st.error(f"Please Choose Timeframe Within Token Traded Prices{e}")
+            except:
+                st.error('Please Choose Timeframe Within Token Traded Prices')
                
             
             try:
@@ -309,7 +321,7 @@ class contractProcessor():
                             }
                 return price_info
             except Exception as e:
-                st.error(f"Please Choose Timeframe Within Token Traded Pricess{e}")
+                st.error('Please Choose Timeframe Within Token Traded Pricess')
 
    
     async def gecko_price_fetch(self,session,timeframe,poolId,pair=None,network=None) -> dict:
@@ -330,7 +342,7 @@ class contractProcessor():
             }}
             return pair_data_info
         except Exception as e:
-            st.error(f"Please Choose Timeframe Within Token Traded Prices {e}")
+            st.error(f'Please Choose Timeframe Within Token Traded Prices')
 
     def process_date_time(self,added_minute):
         from datetime import datetime
@@ -425,7 +437,7 @@ class contractProcessor():
                 network_id = data['network']['identifier']
                 return network_id
             except Exception as e:
-                st.error(f"Unable To Request For Contract Info From GeckoTerminal issue {e}")
+                st.error(f'Unable To Request For Contract Info From GeckoTerminal issue {e}')
 
     # async def pair(self,session,address,pair_endpoint):
     async def pair(self,session,address):
