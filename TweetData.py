@@ -518,9 +518,9 @@ class contractProcessor():
                     st.session_state['slide_index'] -=1
 
             address = st.session_state['address_symbol'][st.session_state['slide_index']][0]
-            st.badge(f'Token Address : {st.session_state['address_symbol'][st.session_state['slide_index']][0]}',color='violet')
-            st.badge(f'Symbol : ${st.session_state['address_symbol'][st.session_state['slide_index']][1]}',color='orange')
-            st.badge(f'Network : {st.session_state['address_symbol'][st.session_state['slide_index']][2]}',color='green')
+            st.badge(f"Token Address : {st.session_state['address_symbol'][st.session_state['slide_index']][0]}",color='violet')
+            st.badge(f"Symbol : ${st.session_state['address_symbol'][st.session_state['slide_index']][1]}",color='orange')
+            st.badge(f"Network : {st.session_state['address_symbol'][st.session_state['slide_index']][2]}",color='green')
             st.dataframe(st.session_state['data_frames'][address])
 
             col1,col2,col3 = st.columns([1,2,3])
