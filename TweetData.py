@@ -20,7 +20,7 @@ import pandas as pd
 
 
 # bearerToken =st.secrets['bearer_token']
-bearerToken = os.get('bearerToken')
+bearerToken = os.environ.get('bearerToken')
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
