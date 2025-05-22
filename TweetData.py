@@ -221,7 +221,7 @@ class contractProcessor():
         # }
 
         headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+               
                 "Accept": "application/json",
                 "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
                 "Sec-CH-UA-Platform": '"Windows"',
@@ -360,7 +360,7 @@ class contractProcessor():
         # }
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+           
             "Accept": "application/json",
             "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
             "Sec-CH-UA-Platform": '"Windows"',
@@ -384,7 +384,7 @@ class contractProcessor():
         #     "Accept": "application/json"
         # }
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+            
             "Accept": "application/json",
             "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
             "Sec-CH-UA-Platform": '"Windows"',
@@ -394,7 +394,6 @@ class contractProcessor():
         async with session.get(url,headers=headers) as response:
             try:
                 result = await response.json()
-                st.write(result)
                 data = result['data']['attributes']['pools'][0]
                 pair = data['address']
                 network_id = data['network']['identifier']
