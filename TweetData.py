@@ -13,12 +13,12 @@ import asyncio
 import aiohttp
 import pandas as pd
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
 
-bearerToken =st.secrets['bearer_token']
+# bearerToken =st.secrets['bearer_token']
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -221,7 +221,7 @@ class contractProcessor():
         # }
 
         headers = {
-               
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
                 "Accept": "application/json",
                 "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
                 "Sec-CH-UA-Platform": '"Windows"',
@@ -360,7 +360,7 @@ class contractProcessor():
         # }
 
         headers = {
-           
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
             "Accept": "application/json",
             "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
             "Sec-CH-UA-Platform": '"Windows"',
@@ -374,8 +374,8 @@ class contractProcessor():
                 poolId = data['id']
                 pairId = result['data']['relationships']['pairs']['data'][0]['id']
                 return poolId,pairId
-           except:
-               print('Issue getting the poolId')
+           except Exception as e:
+               st.error('Issue getting the poolId',e)
 
     async  def fetchNetworkId(self,session,address):
         # 
@@ -384,7 +384,7 @@ class contractProcessor():
         #     "Accept": "application/json"
         # }
         headers = {
-            
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
             "Accept": "application/json",
             "Sec-CH-UA": '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
             "Sec-CH-UA-Platform": '"Windows"',
@@ -398,8 +398,8 @@ class contractProcessor():
                 pair = data['address']
                 network_id = data['network']['identifier']
                 return network_id
-            except:
-                st.write('Unable To Request For Contract Info From GeckoTerminal')
+            except Exception as e:
+                st.error('Unable To Request For Contract Info From GeckoTerminal issue',e)
 
     # async def pair(self,session,address,pair_endpoint):
     async def pair(self,session,address):
