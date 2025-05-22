@@ -309,7 +309,7 @@ class contractProcessor():
                             }
                 return price_info
             except Exception as e:
-                st.error('Please Choose Timeframe Within Token Traded Pricess')
+                st.error(f"Please Choose Timeframe Within Token Traded Pricess{e}")
 
    
     async def gecko_price_fetch(self,session,timeframe,poolId,pair=None,network=None) -> dict:
@@ -330,7 +330,7 @@ class contractProcessor():
             }}
             return pair_data_info
         except Exception as e:
-            st.error(f'Please Choose Timeframe Within Token Traded Prices')
+            st.error(f"Please Choose Timeframe Within Token Traded Prices {e}")
 
     def process_date_time(self,added_minute):
         from datetime import datetime
@@ -425,7 +425,7 @@ class contractProcessor():
                 network_id = data['network']['identifier']
                 return network_id
             except Exception as e:
-                st.error(f'Unable To Request For Contract Info From GeckoTerminal issue {e}')
+                st.error(f"Unable To Request For Contract Info From GeckoTerminal issue {e}")
 
     # async def pair(self,session,address,pair_endpoint):
     async def pair(self,session,address):
