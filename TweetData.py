@@ -449,7 +449,7 @@ class contractProcessor():
             async with session.get(pair_endpoint) as response:
                 try:
                     result = await response.json()
-                    st.write(result)
+                    # st.write(result)
                     pair_address = result['data'][0]['attributes']['address']
                     task_poolId = asyncio.create_task(self.Fetch_PoolId_TokenId(session,network_id,pair_address))
                     poolId,pairId = await task_poolId
