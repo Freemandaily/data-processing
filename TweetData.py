@@ -258,6 +258,7 @@ class contractProcessor():
                 result = await response.json()
                 datas = result['data']
                 price_data = [value for data in datas for key in ['o','h','l','c'] for value in [data[key]]]
+                st.write(price_data)
                 dates = [value for data in datas for key in ['dt'] for value in [data[key]]]
                 """
                 This fetch get data from the gecko terminal website,
@@ -353,12 +354,12 @@ class contractProcessor():
     def process_date_time(self,added_minute):
         from datetime import datetime
         combine = self.date_time
-        st.write(combine)
         added_minute = added_minute + 1
         time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S")
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
         from_timestamp = time_object.timestamp()
         to_timestamp = processed_date_time.timestamp()
+        st.write(from_timestamp)
         self.from_timetamp = int(from_timestamp)
         self.to_timestamp = int(to_timestamp)
 
