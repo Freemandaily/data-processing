@@ -359,6 +359,7 @@ class contractProcessor():
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
         from_timestamp = time_object.timestamp()
         to_timestamp = processed_date_time.timestamp()
+        st.write(combine)
         st.write(from_timestamp)
         self.from_timetamp = int(from_timestamp)
         self.to_timestamp = int(to_timestamp)
