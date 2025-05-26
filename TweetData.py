@@ -258,7 +258,7 @@ class contractProcessor():
                 result = await response.json()
                 datas = result['data']
                 price_data = [value for data in datas for key in ['o','h','l','c'] for value in [data[key]]]
-                st.write(price_data)
+                st.write(datas)
                 dates = [value for data in datas for key in ['dt'] for value in [data[key]]]
                 """
                 This fetch get data from the gecko terminal website,
