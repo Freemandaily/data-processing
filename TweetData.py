@@ -353,6 +353,7 @@ class contractProcessor():
     def process_date_time(self,added_minute):
         from datetime import datetime
         combine = self.date_time
+        st.write(combine)
         added_minute = added_minute + 1
         time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S")
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
