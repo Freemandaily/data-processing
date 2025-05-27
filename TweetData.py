@@ -470,20 +470,21 @@ class contractProcessor():
                     if result['data']:
                         pair_address = result['data'][0]['attributes']['address']
                         symbol = result['data'][0]['attributes']['name']
-                    else:
-                        pair_address = pair  
-                        symbol = f"{symbol}/Token"
-                    task_poolId = asyncio.create_task(self.Fetch_PoolId_TokenId(session,network_id,pair_address))
-                    poolId,pairId = await task_poolId
-                    token_data = {'address':address,  #add 'network_id' = network_id
-                                'pair':pair_address,
-                                'symbol':symbol,
-                                'network_id':network_id,
-                                'poolId': f'{poolId}/{pairId}'}
-                    self.pairs.append(pair_address)
-                    self.tokens_data.append(token_data)
-                except ValueError as e:
-                    st.error(f'Check If This Contract Address Is Correct : {e}')
+                 except:
+                    # else:
+                    pair_address = pair  
+                    symbol = f"{symbol}/Token"
+                task_poolId = asyncio.create_task(self.Fetch_PoolId_TokenId(session,network_id,pair_address))
+                poolId,pairId = await task_poolId
+                token_data = {'address':address,  #add 'network_id' = network_id
+                            'pair':pair_address,
+                            'symbol':symbol,
+                            'network_id':network_id,
+                            'poolId': f'{poolId}/{pairId}'}
+                self.pairs.append(pair_address)
+                self.tokens_data.append(token_data)
+            # except ValueError as e:
+            #     st.error(f'Check If This Contract Address Is Correct : {e}')
         except Exception as e:
             st.error(f'Check If This Mint Address Is Correct: Unable to fetch Pair Info{e}')
     
