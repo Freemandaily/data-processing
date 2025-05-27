@@ -258,7 +258,7 @@ class contractProcessor():
                 result = await response.json()
                 datas = result['data']
                 price_data = [value for data in datas for key in ['o','h','l','c'] for value in [data[key]]]
-                st.write(datas)
+                # st.write(datas)
                 dates = [value for data in datas for key in ['dt'] for value in [data[key]]]
                 """
                 This fetch get data from the gecko terminal website,
@@ -306,6 +306,10 @@ class contractProcessor():
                 
                 percentage_change = str(round(((close_price - entry_price)/entry_price) * 100,3)) + '%'
                 entry_to_peak = str(round(((peak_price - entry_price) /entry_price) * 100,3)) +'%' 
+                entry_price = "{:.13f}".format(entry_price).rstrip("0") 
+                close_price = "{:.13f}".format(close_price).rstrip("0")
+                lowest_price =  "{:.13f}".format(lowest_price).rstrip("0")
+                peak_price = "{:.13f}".format(peak_price).rstrip("0")
             except:
                 st.error(f"Please Choose Timeframe Within Token Traded Prices{e}")
                
@@ -317,8 +321,8 @@ class contractProcessor():
                     drawadown = (( price - max_so_far) / max_so_far) * 100
                     max_drawdown = min(drawadown,max_drawdown)
 
-                price_info = {'Entry_Price': round(entry_price,7),
-                            'Price':round(close_price,7),
+                price_info = {'Entry_Price': entry_price, #round(entry_price,7),
+                            'Price':close_price, #round(close_price,7),
                             '%_Change':percentage_change,
                             # DrawDown,
                             'Peak_Price':peak_price,
