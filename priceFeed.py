@@ -182,6 +182,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
         from_timestamp = time_object.timestamp()
         to_timestamp = processed_date_time.timestamp()
+        st.write(from_timestamp,to_timestamp)
         return from_timestamp,to_timestamp
 
     
@@ -248,8 +249,8 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
     # st.write(timeframe)
     structured_data = {}
     for date , token_fetched in tweet_token_detail.items():
-        # date_object = datetime.strptime(str(date), "%Y-%m-%d %H:%M")
-        # date = date_object + timedelta(hours=1)
+        date_object = datetime.strptime(str(date), "%Y-%m-%d %H:%M")
+        date = date_object + timedelta(hours=1)
         structured_data[date] = {}
         token_symbol = [symbol[1:].upper() for symbol in token_fetched['Token_names']]
         token_contracts = [contract for contract in token_fetched['contracts']]
