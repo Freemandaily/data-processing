@@ -1,3 +1,5 @@
+
+
 from ast import main
 from multiprocessing import pool
 import time
@@ -470,7 +472,7 @@ class contractProcessor():
                     if result['data']:
                         pair_address = result['data'][0]['attributes']['address']
                         symbol = result['data'][0]['attributes']['name']
-                 except:
+                except:
                     # else:
                     pair_address = pair  
                     symbol = f"{symbol}/Token"
