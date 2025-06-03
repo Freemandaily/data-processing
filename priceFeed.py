@@ -1,12 +1,16 @@
+import logging
 import sys
-import time,pytz
+import time
 import requests,json
 from datetime import datetime, timedelta
 import asyncio,aiohttp
 import streamlit as st
 from TweetData import contractProcessor
 
-
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] - %(message)s'
+)
 
 # with open('key.json','r') as file:
 #     keys = json.load(file)
@@ -18,59 +22,7 @@ class price_with_interval:
     def __init__(self):
         self.token_interval_prices = []
 
-# def fetchPrice(pair,tweetDate,time_frame,timeframe_prices,get_start_price=None): # accepts pair (3) get the price of the token ,
-#     from_date = tweetDate[:10]
-#     st.write(tweetDate)
-#     st.stop()
-#     date_obj = datetime.strptime(from_date, '%Y-%m-%d')
-#     new_date = date_obj + timedelta(days=1)
-#     to_date = new_date.strftime('%Y-%m-%d')
-
-
-#     url = f"https://solana-gateway.moralis.io/token/mainnet/pairs/{pair}/ohlcv?timeframe=5min&currency=usd&fromDate={from_date}&toDate={to_date}&limit=1000"
-
-#     headers = {
-#     "Accept": "application/json",
-#     "X-API-Key": moralis
-#     }
-#     try:
-#         if not timeframe_prices.token_interval_prices:
-#             response = requests.request("GET", url, headers=headers)
-#             if response != 200:
-#                 data = response.json()
-#                 Token_Price_datas = data.get('result',[])
-#                 timeframe_prices.token_interval_prices = Token_Price_datas
-#             else:
-#                 st.error('Requesting Data from Moralis Failed! App Execution Stopped .Please Reload The Page And Try Again')
-#                 st.stop()
-#         else:
-#             Token_Price_datas = timeframe_prices.token_interval_prices
-
-#         for price_data in Token_Price_datas:
-#             moralis_date_obj = datetime.fromisoformat(price_data['timestamp'].replace('Z', '+00:00'))
-#             Moralis_formatted_date = moralis_date_obj.strftime("%Y-%m-%d %H:%M:%S")
-
-#             if get_start_price:
-#                 time_frame_time = tweeted_timeframe(tweetDate)
-#             else:
-#                 time_frame_time = timeFrame(tweetDate,time_frame)
-
-#             if Moralis_formatted_date == time_frame_time:
-#                 open = price_data['open']
-#                 high_price = price_data['high']
-#                 low_price = price_data['low']
-#                 close_price = price_data['close']
-#                 return close_price
-
-#     except Exception as e:
-#         st.error('Failed To Fetch Token Price Data! Please Reload The Page because Execution has Terminated')
-#         st.stop()
-
-
-# def fetchPrice(pair,tweeted_date,timeframe):# fetchPrice(pair,tweeted_date,five_minute,ten_minute,fifteen_minute):
 def fetchPrice(network,pair,tweeted_date,timeframe,poolId): 
-       
-    
     async def Priceswharehouse(session,from_timestamp,to_timestamp,poolId):
         # headers = {
         #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -89,7 +41,8 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-origin"
         }
-
+        from_timestamp =  int(from_timestamp)
+        to_timestamp = int(to_timestamp)
         url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={from_timestamp}&to_timestamp={to_timestamp}&for_update=false&currency=usd&is_inverted=false'
         async with session.get(url=url,headers=headers) as response:
             result = await response.json()
@@ -118,7 +71,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
             try:
                 task_price  = asyncio.create_task(Priceswharehouse(session,from_timestamp,to_timestamp,poolId))
                 price_data,new_date_timestamp = await task_price
-
+                # st.write(price_data)
                 if int(from_timestamp) in new_date_timestamp:
                     open_price = price_data[4]
                     price_data = price_data[4:]
@@ -135,8 +88,8 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
                 max_drawdown  = 0
                 entry_to_peak = str(round(((peak_price - open_price) /open_price) * 100,3)) +'%'
             except:
+                logging.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
                 st.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
-                # st.stop()
             
             try:
                 for price in price_data:
@@ -153,6 +106,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
                             }
                 return price_info
             except Exception as e:
+                logging.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
                 st.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
                 st.stop()
 
@@ -163,7 +117,6 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
             if int(timeframe) > 60:
                 hour = str(timeframe //60)
                 minutes = timeframe %60
-                print(f'{hour}:{minutes}m')
                 timeframe = f'{hour}:{minutes}m'  if minutes > 0  else f'{hour}hr(s)' 
             else:
                 timeframe = f'{timeframe}m'
@@ -172,17 +125,17 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
             }}
             return pair_data_info
         except Exception as e:
+            logging.error(f'Please Choose Timeframe Within Token Traded Prices')
             st.error(f'Please Choose Timeframe Within Token Traded Prices')
 
     def process_date_time(tweeted_date,added_minute):
         from datetime import datetime
         combine = tweeted_date
         added_minute = added_minute + 1
-        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.FixedOffset(60))
+        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S") #.replace(tzinfo=FixedOffset(60))
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
         from_timestamp = time_object.timestamp()
         to_timestamp = processed_date_time.timestamp()
-        # st.write(from_timestamp,to_timestamp)
         return from_timestamp,to_timestamp
 
     
@@ -233,7 +186,7 @@ def percent_increase(initial_price:str,ending_price:str) -> str:
     try:
         percent = str(round(((ending_price - initial_price) /initial_price ) * 100,2))
         if not percent.startswith('-'):
-            percent = '+'+ percent + '%'
+            percent = percent + '%'
         else:
             percent = percent + '%'
         return percent
@@ -244,14 +197,107 @@ def fetchMessage():
     with st.spinner('Analyzing Token Prices. Please Wait....... '):
         time.sleep(3)
 
+
+def format_number(supply,price):
+    number  = float(supply)*float(price)
+
+    if not isinstance(number, (int,float,str)):
+        return str(number)
+    
+    abs_num = abs(float(number))
+    if abs_num >= 1_000_000_000:
+        return f"{abs_num/1_000_000_000:.1f}B"
+    elif abs_num >= 1_000_000:
+        return f"{abs_num/1_000_000:.1f}M"
+    elif abs_num >= 1_000:
+        return f"{abs_num/1_000:.1f}K"
+    else:
+        return f"{abs_num:.2f}"
+
+
+def pooldate(network_id,contract,tweet_date):
+    from datetime import datetime, timezone
+    url = f"https://api.geckoterminal.com/api/v2/networks/{network_id}/tokens/{contract}?include=top_pools"
+    time.sleep(2)
+    response = requests.get(url)
+    if response.status_code != 200:
+        logging.error('Unable To Fetch Pool Date')
+        st.error('Unable To Fetch Pool Date')
+        st.stop()
+    results =  response.json()
+    pooldata = results['included'][0]['attributes']
+    pool_creation_date = pooldata['pool_created_at']
+
+    pool_date = datetime.fromisoformat(pool_creation_date) 
+    tweet_date = tweet_date.strftime("%Y-%m-%d %H:%M:%S")
+    tweet_date = datetime.strptime(tweet_date, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+    time_diff = tweet_date - pool_date
+    first_tweet_minute = st.session_state['first_tweet_minute'] 
+    time_diff_hours = time_diff.total_seconds() / int(first_tweet_minute) * 60 #2400  # 40 minute
+    if time_diff_hours >= 1:
+        affirm = True
+    else:
+        affirm = False
+    return affirm
+
+def scoring(timeframe,price_change):
+    prototype  = {
+                                'hour':{'100_percnt growth':4,   
+                                    '50percnt growth':2,
+                                    '20percnt growth':1}
+      
+                         }
+    if price_change == None:
+        score = 0
+        return score
+    else:
+        if price_change[:1] == '-':
+            score = 0
+            return score
+        
+        price_change = float(price_change[:-1])
+
+    def givescore(timeframe_score_board,timeframe,price_change,hour_minute):
+        if timeframe >= list(timeframe_score_board.keys())[0]:
+            for increase_perc,score in timeframe_score_board[hour_minute].items():
+                if price_change >= increase_perc:
+                    return score
+                else:
+                    score = 0
+            return score
+        else:
+            score = 0
+            return score
+
+    hour_score = {
+        4:{100:4,   
+           50:2,
+           20:1}
+    }
+    minutes_score = {
+        15:{100:8,
+           50:4,
+           20:2}
+    }
+    if int(timeframe) >= 60:
+        
+        hour = int(timeframe //60)
+        score = givescore(hour_score,hour,price_change,4)
+        return score
+    else:
+        minutes = int(timeframe)
+        score = givescore(minutes_score,minutes,price_change,15)
+        return score
+        
+
 # Getting the different price timeframe 
 def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
-    # st.write(timeframe)
+    logging.info('Fetching Price Of Tweeted Token')
     structured_data = {}
-    for date , token_fetched in tweet_token_detail.items():
-        date_object = datetime.strptime(str(date), "%Y-%m-%d %H:%M")
+    for identifier , token_fetched in tweet_token_detail.items():
+        date_object = datetime.strptime(str(token_fetched['date']), "%Y-%m-%d %H:%M")
         date = date_object + timedelta(hours=1)
-        structured_data[date] = {}
+        structured_data[identifier] = {}
         token_symbol = [symbol[1:].upper() for symbol in token_fetched['Token_names']]
         token_contracts = [contract for contract in token_fetched['contracts']]
         username  = token_fetched['username']
@@ -271,85 +317,107 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
         #                 if 'Error' in pair_address:
         #                     print(pair_address['Error'])
         #                     continue
-        #                 structured_data[date][jupToken['address']] = {'pair':pair_address,
+        #                 structured_data[username][jupToken['address']] = {'pair':pair_address,
         #                                                             'symbol':jupToken['symbol'],
         #                                                             'username': username} 
         #                 price_timeframes = fetchPrice(pair_address,date,5,10,15)
         #                 # st.write(price_timeframes)
         #                 # st.stop()
         #                 price_data = price_timeframes[0][pair_address]
-        #                 structured_data[date][jupToken['address']]['Price_Tweeted_At'] = price_data['5m']['open_price']#fetchPrice(pair_address,date,5,timeframe_prices,get_start_price='YES')
-        #                 structured_data[date][jupToken['address']]['price_5m'] = price_data['5m']['close_price'] #fetchPrice(pair_address,date,5,timeframe_prices) # 5 min timeFrame
-        #                 structured_data[date][jupToken['address']]['5m Drawdown'] = price_data['5m']['max_drawdown']
-        #                 structured_data[date][jupToken['address']]['price_10m'] = price_data['10m']['close_price']#fetchPrice(pair_address,date,10,timeframe_prices) 
-        #                 structured_data[date][jupToken['address']]['10m Drawdown'] = price_data['10m']['max_drawdown']
-        #                 structured_data[date][jupToken['address']]['price_15m'] = price_data['15m']['close_price']#fetchPrice(pair_address,date,15,timeframe_prices)
-        #                 structured_data[date][jupToken['address']]['15m Drawdown'] = price_data['15m']['max_drawdown']
-        #                 structured_data[date][jupToken['address']]['price_5m%Increase'] = percent_increase(structured_data[date][jupToken['address']]['Price_Tweeted_At'],structured_data[date][jupToken['address']]['price_5m'])
-        #                 structured_data[date][jupToken['address']]['price_10m%Increase'] = percent_increase(structured_data[date][jupToken['address']]['Price_Tweeted_At'],structured_data[date][jupToken['address']]['price_10m'])
-        #                 structured_data[date][jupToken['address']]['price_15m%Increase'] = percent_increase(structured_data[date][jupToken['address']]['Price_Tweeted_At'],structured_data[date][jupToken['address']]['price_15m'])
+        #                 structured_data[username][jupToken['address']]['Price_Tweeted_At'] = price_data['5m']['open_price']#fetchPrice(pair_address,date,5,timeframe_prices,get_start_price='YES')
+        #                 structured_data[username][jupToken['address']]['price_5m'] = price_data['5m']['close_price'] #fetchPrice(pair_address,date,5,timeframe_prices) # 5 min timeFrame
+        #                 structured_data[username][jupToken['address']]['5m Drawdown'] = price_data['5m']['max_drawdown']
+        #                 structured_data[username][jupToken['address']]['price_10m'] = price_data['10m']['close_price']#fetchPrice(pair_address,date,10,timeframe_prices) 
+        #                 structured_data[username][jupToken['address']]['10m Drawdown'] = price_data['10m']['max_drawdown']
+        #                 structured_data[username][jupToken['address']]['price_15m'] = price_data['15m']['close_price']#fetchPrice(pair_address,date,15,timeframe_prices)
+        #                 structured_data[username][jupToken['address']]['15m Drawdown'] = price_data['15m']['max_drawdown']
+        #                 structured_data[username][jupToken['address']]['price_5m%Increase'] = percent_increase(structured_data[username][jupToken['address']]['Price_Tweeted_At'],structured_data[username][jupToken['address']]['price_5m'])
+        #                 structured_data[username][jupToken['address']]['price_10m%Increase'] = percent_increase(structured_data[username][jupToken['address']]['Price_Tweeted_At'],structured_data[username][jupToken['address']]['price_10m'])
+        #                 structured_data[username][jupToken['address']]['price_15m%Increase'] = percent_increase(structured_data[username][jupToken['address']]['Price_Tweeted_At'],structured_data[username][jupToken['address']]['price_15m'])
         #                 timeframe_prices.token_interval_prices = []
         #     except KeyboardInterrupt :
         #         Error_message = {'Error':'Application Runs Interrupted','Message':'Fetching Token Price Ranges'}
         #         return Error_message
-
+        
         if len(token_contracts) > 0:
-            process_contract = contractProcessor(token_contracts)
-            if 'data_frames' in st.session_state: # delete session set by contract search option
-                del st.session_state['data_frames']
-            fetch_pairs = process_contract.fetch_pairs()
-            for token_data in process_contract.tokens_data:# token_contracts:
+            if 'tokens_data' not in st.session_state:
+                process_contract = contractProcessor(token_contracts)
+                if 'data_frames' in st.session_state: # delete session set by contract search option
+                    del st.session_state['data_frames']
+                fetch_pairs = process_contract.fetch_pairs()
+                tokens_data = process_contract.tokens_data
+            else:
+                if 'data_frames' in st.session_state: # delete session set by contract search option
+                    del st.session_state['data_frames']
+                tokens_data = st.session_state['tokens_data']
+
+            for token_data in tokens_data:# token_contracts:
                 pair_address = token_data['pair']
                 token_address = token_data['address']
                 symbol = token_data['symbol']
                 network = token_data['network_id']
-                structured_data[date][token_address] = {'username': username,
+                if 'Search_tweets_Contract'in st.session_state:
+                    structured_data[identifier][token_address] = {'username': username,
+                                                                'Followers': token_fetched['followers'],
+                                                                'Tweet_id':token_fetched['tweet_id'],
+                                                                'Tweet_Date':date,
+                                                                'network':network,
+                                                                'symbol': symbol.split('/')[0]
+                                                                    }
+                else:
+                    affirm = pooldate(network,token_address,date)
+                    if affirm == False:
+                        continue
+                    structured_data[identifier][token_address] = {'username': username,
                                                         'Tweet_Date':date,
-                                                        #'pair':pair_address,
+                                                        'Tweet_id':token_fetched['tweet_id'],
                                                          'network':network,
                                                          'symbol': symbol.split('/')[0],# jupToken['symbol'],
                                                             }
+                    
                 price_timeframes = fetchPrice(network,pair_address,date,timeframe,token_data['poolId'])
-                if int(timeframe) > 60:
+                if int(timeframe) >= 60:
                     hour = str(timeframe //60)
                     minutes = timeframe %60
-                    print(f'{hour}:{minutes}m')
                     setTimeframe = f'{hour}:{minutes}m'  if minutes > 0  else f'{hour}hr(s)' 
                 else:
                     setTimeframe = f'{timeframe}m'
                 price_data = price_timeframes[0][pair_address]
-                structured_data[date][token_address]['Price_Tweeted_At'] = price_data[f'{setTimeframe}']['open_price'] #fetchPrice(pair_address,date,5,timeframe_prices,get_start_price='YES')
-                structured_data[date][token_address][f'price_{setTimeframe}'] = price_data[f'{setTimeframe}']['close_price'] #fetchPrice(pair_address,date,5,timeframe_prices) # 5 min timeFrame
-                structured_data[date][token_address][f'price_{setTimeframe}%Increase'] = percent_increase(structured_data[date][token_address]['Price_Tweeted_At'],structured_data[date][token_address][f'price_{setTimeframe}'])
-                structured_data[date][token_address][f'{setTimeframe}_lowest_price'] = price_data[f'{setTimeframe}']['lowest_price']
-                structured_data[date][token_address][f'{setTimeframe}_peak_price'] = price_data[f'{setTimeframe}']['peak_price']
-                structured_data[date][token_address][f'{setTimeframe}_entry_to_peak'] = price_data[f'{setTimeframe}']['entry_to_peak']
-                structured_data[date][token_address][f'{setTimeframe} Drawdown'] = price_data[f'{setTimeframe}']['max_drawdown']
- 
+                structured_data[identifier][token_address]['Price_Tweeted_At'] = price_data[f'{setTimeframe}']['open_price'] #fetchPrice(pair_address,date,5,timeframe_prices,get_start_price='YES')
+                structured_data[identifier][token_address]['Market_Cap'] = format_number(token_data['supply'],price_data[f'{setTimeframe}']['open_price'])
+                structured_data[identifier][token_address][f'price_{setTimeframe}'] = price_data[f'{setTimeframe}']['close_price'] #fetchPrice(pair_address,date,5,timeframe_prices) # 5 min timeFrame
+                percent_change = percent_increase(structured_data[identifier][token_address]['Price_Tweeted_At'],structured_data[identifier][token_address][f'price_{setTimeframe}'])
+                structured_data[identifier][token_address][f'price_{setTimeframe}%Increase'] = percent_change
+                structured_data[identifier][token_address][f'{setTimeframe}_Score'] = scoring(timeframe,percent_change)
+                structured_data[identifier][token_address][f'{setTimeframe}_lowest_price'] = price_data[f'{setTimeframe}']['lowest_price']
+                structured_data[identifier][token_address][f'{setTimeframe}_peak_price'] = price_data[f'{setTimeframe}']['peak_price']
+                structured_data[identifier][token_address][f'{setTimeframe}_entry_to_peak'] = price_data[f'{setTimeframe}']['entry_to_peak']
+                structured_data[identifier][token_address][f'{setTimeframe} Drawdown'] = price_data[f'{setTimeframe}']['max_drawdown']
+        
     if 'valid contracts' in st.session_state:
         del st.session_state['valid contracts']
-
+        
     structured_data= { date:value for date,value in structured_data.items() if value}
     if structured_data:
        if 'df_data' not in st.session_state:
         st.toast('Filtering  Fetched Token Price Data!')
-        print('Filtering  Fetched Token Price Data!')
-        time.sleep(10)
+        logging.info('Filtering  Fetched Token Price Data!')
+        time.sleep(2)
        return structured_data
     else:
+        logging.error('Error Fetching Token Price. CHeck If Token Is On GeckoTerminal Yet')
         Error_message = {'Error':'Error Fetching Token Price. CHeck If Token Is On GeckoTerminal Yet'}
         return Error_message
     
 # This fuunction fetches the tweeted contract proce data
 def token_tweeted_analyzor(tweet_token_detail:dict,timeframe=5)-> dict: 
-    print('Fetching Tweeted Token Datas and Price TimeFrames Please Wait..')
-    
+    logging.info('Fetching Tweeted Token Datas and Price TimeFrames Please Wait..')
     analyzor = Tweet_tokenInfoProcessor(tweet_token_detail,timeframe)
     if 'Error' in analyzor:
         return analyzor
-    for date in analyzor: # filter
-        analyzor[date] = {
-            key : value for key,value in analyzor[date].items() if value['Price_Tweeted_At'] != None
+    for username in analyzor: # filter
+        analyzor[username] = {
+            key : value for key,value in analyzor[username].items() if value['Price_Tweeted_At'] != None
         }
     return analyzor
 
@@ -364,17 +432,20 @@ def dexScreener_token_data(mint_address):
         pair = token_data[0]['pairAddress']
         return pair
     except requests.exceptions.ConnectionError:
+        logging.error(f'Error :Failed to connect to {url}! App Executin Has Stopped!  Please Reload The Page')
         st.error(f'Error :Failed to connect to {url}! App Executin Has Stopped!  Please Reload The Page')
         st.stop()
     except requests.exceptions.Timeout:
         st.error(f"Error: Request timed out for{url}!. App Executin Has Stopped!  Please Reload The Page")
         st.stop()
     except requests.exceptions.RequestException as e:
+        logging.error(f"Error: A network-related error occurred! App Executin Has Stopped!  Please Reload The Page:")
         st.error(f"Error: A network-related error occurred! App Executin Has Stopped!  Please Reload The Page:")
         st.stop()
     except KeyboardInterrupt:
         pass
     except Exception as e:
+        logging.error('Token Not Found')
         Error_message = {'Error':'Token Not Found'}
         return Error_message
     
@@ -452,3 +523,5 @@ def fetch_price(pair,tweeted_date,five_minute,ten_minute,fifteen_minute):
 
     price_timeframes = process_pair(pair,tweeted_date,five_minute,ten_minute,fifteen_minute)
     return price_timeframes
+
+

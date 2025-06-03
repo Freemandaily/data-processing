@@ -1,11 +1,6 @@
-
-
-from ast import main
-from multiprocessing import pool
 import time
-from urllib import response
 import tweepy
-import sys
+import sys,requests
 from datetime import datetime,timedelta
 import datetime
 import pytz,re
@@ -14,15 +9,22 @@ import streamlit as st
 import asyncio 
 import aiohttp
 import pandas as pd
+import logging
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
 
-try:
-    bearerToken =st.secrets['bearer_token']
-except:
-    bearerToken = os.environ.get('bearerToken')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] - %(message)s'
+)
+
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
+
+# try:
+#     bearerToken =st.secrets['bearer_token']
+# except:
+#     bearerToken = os.environ.get('bearerToken')
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -53,6 +55,7 @@ class processor:
         
     # Fetching Ticker and contracts contains in the tweet
     def fetchTicker_Contract(self,tweet_text:str) -> dict:
+        logging.info('Fetching Tweeted Contract in the Tweet')
         contract_patterns = r'\b(0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44}|T[1-9A-HJ-NP-Za-km-z]{33})\b'
         ticker_partterns = r'\$[A-Za-z0-9_-]+'
 
@@ -67,10 +70,11 @@ class processor:
 
     # Using X API to fetch user tweets
     def fetchTweets(self) -> list:
+        logging.info('Fetching User Tweet(s)')
         if self.timeframe == 7:
             request_limit = 1
         else:
-            request_limit = 3
+            request_limit = 1
         user_tweets = []
         try:
             for response in tweepy.Paginator(self.client.get_users_tweets,
@@ -87,35 +91,47 @@ class processor:
                         tweet_dict = {
                             'tweet_id':tweet.id,
                             'tweet_text':tweet.text,
-                            'created_at':tweet.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                            'created_at':tweet.created_at.strftime("%Y-%m-%d %H:%M"),
                             'username': self.username
                         }
                         user_tweets.append(tweet_dict)
             self.tweets = user_tweets
         except Exception as e:
-            Error_message = {'Error':f'Failed To Fetch Tweets Because of  {e}\nUpgrade Your X Developer Plan or Wait For Sometimes'}
+            logging.error(f'Failed To Fetch Tweets Wait For Sometimes')
+            Error_message = {'Error':f'Failed To Fetch Tweets Because of  {e}\n Wait For Sometimes'}
             self.tweets = Error_message
-        
+       
     # format the data to a suitable data type
     def Reformat(self,fetched_Token_details:list) -> dict:
         details = {}
         for data in fetched_Token_details:
-            details[data['date']] = { 'Token_names': data['token_details']['ticker_names'],
+            if 'Search_tweets_Contract' in st.session_state:
+                details[data['username']] = { 'Token_names': data['token_details']['ticker_names'],
                                        'contracts': data['token_details']['contracts'],
-                                       'username':data['username']}
+                                       'username':data['username'],
+                                       'followers': data['followers'],
+                                       'tweet_id':data['tweet_id'],
+                                       'date':data['date']}
+            else:
+                details[data['date']] = { 'Token_names': data['token_details']['ticker_names'],
+                                       'contracts': data['token_details']['contracts'],
+                                       'username':data['username'],
+                                       'date':data['date'],
+                                       'tweet_id':data['tweet_id'],}
         details = {date: tokenName_contract for date,tokenName_contract in details.items() if tokenName_contract['Token_names'] or tokenName_contract['contracts']}
         if details:
             st.toast('Tweets Containing Token Symbols Found!')
-            time.sleep(10)
-            print('Tweets Containing Token Symbols Found!')
+            time.sleep(3)
             return details
         else:
+            logging.error('No Tweets Contain Any Token Symbols Or CA.\nAdjust Timeframe and Try Again')
             Error_message = {'Error':'No Tweets Contain Any Token Symbols Or CA.\nAdjust Timeframe and Try Again'}
             time.sleep(7)
             return Error_message
         
     # Start procesing user tweet
     def processTweets(self)->dict: # Entry function
+        logging.info('Proessing Tweets')
         tweets = self.tweets
         if isinstance(tweets,dict) and 'Error' in tweets:
             return tweets # Error handling for streamlit
@@ -124,22 +140,36 @@ class processor:
         if tweets:
             for tweet in tweets:
                 token_details = self.fetchTicker_Contract(tweet['tweet_text'])
-                refined_details = {
+                if 'Search_tweets_Contract' in st.session_state:
+                    refined_details = {
                     'username':tweet['username'],
+                    'followers':tweet['followers'],
+                    'tweet_id':tweet['tweet_id'],
                     'token_details': token_details,
                     'date': tweet['created_at']
                 }
+                else:   
+                    refined_details = {
+                        'username':tweet['username'],
+                        'token_details': token_details,
+                        'date': tweet['created_at'],
+                        'tweet_id':tweet['tweet_id']
+                    }
                 fetched_Token_details.append(refined_details)
             tweeted_Token_details = self.Reformat(fetched_Token_details)
-            return tweeted_Token_details
+            if 'Search_tweets_Contract' not  in st.session_state:
+                return tweeted_Token_details
+            else:
+                st.session_state['tweeted_token_details'] = tweeted_Token_details
+                
         else :
             Error_message = {'Error':f'Not Able To Process {self.username} Tweets! Please check I'}
-            return Error_message
+            if 'Search_tweets_Contract' not  in st.session_state:
+                return Error_message
         
     # Get tweet id and user using the provided url
     def Fetch_Id_username_url(self,url):
         url = url.lower()
-        print(url)
         if url.startswith('https://x.com/'):
             try:
                 tweet_id = url.split('/')[-1]
@@ -149,15 +179,16 @@ class processor:
                 else:
                     raise ValueError('Incorrect Tweet Id')
             except ValueError as e:
-                print(f'Make Sure Url Contains Valid Tweet Id ')
+                logging.error('Make Sure Url Contains Valid Tweet Id')
                 st.error(f'Make Sure Url Contains Valid Tweet Id ')
                 st.stop()
         else:
-            print('Provide A Valid X Url')
+            logging.error('Provide A Valid X Url')
             st.error('Provide A Valid X Url')
             st.stop()
 
     def search_with_id(self,url):
+        logging.info('Searching Tweet...')
         tweet_id,username =  self.Fetch_Id_username_url(url)
         try:
             tweets = self.client.get_tweets(tweet_id,tweet_fields=['created_at'])
@@ -166,49 +197,21 @@ class processor:
                 tweet_dict = {
                     'tweet_text':tweet.text,
                     'created_at':tweet.created_at.strftime("%Y-%m-%d %H:%M"),
-                    'username': username
+                    'username': username,
+                    'tweet_id':tweet.id
                     }
                 user_tweets.append(tweet_dict)
-            print(user_tweets)
             self.tweets = user_tweets
         except Exception as e:
+            logging.error('Failed To Fetch Tweets')
             Error_message = {'Error':f'Failed To Fetch Tweets Because of  {e}'} # this Error comes because of invali tweet id , configure correctly
             self.tweets = Error_message
 
-    def search_tweet_with_contract(self,text_inputs,start_time):
-        user_tweet = [ ]
-        try:
-            contracts = [text.upper() for text in text_inputs if not text.startswith('0x') and len(text) >= 32]
-            if contracts:
-                st.session_state['valid contracts'] = contracts # for matching only te searched contract in fetchTicker_Contract()
-                for contract in contracts:
-                            pass
-                    # search = self.client.search_recent_tweets(contract,tweet_fields=['author_id','created_at'],start_time=start_time)
-                    # if search.data:
-                        # for search in search.data:
-                        #     user = self.client.get_user(id=search.author_id,user_fields=['username'])
-                        #     username = user.data.username
-                        #     tweet_dict = {
-                        #         'tweet_text':search.text,
-                        #         'created_at':search.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                        #         'username':username
-                        #     }
-                            # user_tweet.append(tweet_dict) 
-                    # else:
-                    #     st.error('No Tweet Contains The Contracts')
-                    #     st.stop()
-                self.tweets = user_tweet
-            else:
-                st.error('Please Enter only Solana Mint Token Contract (32 to 42 char)') 
-                st.stop()   
-        except Exception as e:
-            st.error(f'Error: Issuse is {e}')
-            st.stop()
 
-
-class contractProcessor():
+class contractProcessor(processor):
 
     def __init__(self,mint_addresses:list,date_time=None):
+        super().__init__() # to access processor attributes
         self.mint_addresses = mint_addresses # -> list
         self.pairs = []
         self.tokens_data = []
@@ -253,6 +256,7 @@ class contractProcessor():
         #     "Sec-Fetch-Site": "same-site",
         #     "Priority": "u=1, i"
         #     }
+        
         url = f"https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={self.from_timetamp}&to_timestamp={self.to_timestamp}&for_update=false&currency=usd&is_inverted=false"
         
         try:
@@ -260,7 +264,6 @@ class contractProcessor():
                 result = await response.json()
                 datas = result['data']
                 price_data = [value for data in datas for key in ['o','h','l','c'] for value in [data[key]]]
-                # st.write(datas)
                 dates = [value for data in datas for key in ['dt'] for value in [data[key]]]
                 """
                 This fetch get data from the gecko terminal website,
@@ -278,9 +281,11 @@ class contractProcessor():
                     new_dates_timestamp.append(unix_timestamp)
                 return price_data,new_dates_timestamp
         except Exception as e:
+            logging.error("Cant Fetch Price")
             st.error(f"Cant Fetch Price.Issue: {e}")
 
     async def fetch_ohlc_and_compute(self,session,poolId,network):
+            logging.info('Fetching Token Prices With Timefrane')
             
             try:
                 task_price  = asyncio.create_task(self.Priceswharehouse(session,poolId))
@@ -307,15 +312,16 @@ class contractProcessor():
                 max_drawdown  = 0 
                 
                 percentage_change = str(round(((close_price - entry_price)/entry_price) * 100,3)) + '%'
-                entry_to_peak = str(round(((peak_price - entry_price) /entry_price) * 100,3)) +'%' 
+                entry_to_peak = str(round(((peak_price - entry_price) /entry_price) * 100,3)) +'%'
                 entry_price = "{:.13f}".format(entry_price).rstrip("0") 
                 close_price = "{:.13f}".format(close_price).rstrip("0")
                 lowest_price =  "{:.13f}".format(lowest_price).rstrip("0")
                 peak_price = "{:.13f}".format(peak_price).rstrip("0")
+
             except:
+                logging.error('Please Choose Timeframe Within Token Traded Price')
                 st.error(f"Please Choose Timeframe Within Token Traded Prices{e}")
                
-            
             try:
                 for price in price_data:
                     if price > max_so_far :
@@ -324,7 +330,7 @@ class contractProcessor():
                     max_drawdown = min(drawadown,max_drawdown)
 
                 price_info = {'Entry_Price': entry_price, #round(entry_price,7),
-                            'Price':close_price, #round(close_price,7),
+                            'Price':close_price,#round(close_price,7),
                             '%_Change':percentage_change,
                             # DrawDown,
                             'Peak_Price':peak_price,
@@ -334,6 +340,7 @@ class contractProcessor():
                             }
                 return price_info
             except Exception as e:
+                logging.error('Please Choose Timeframe Within Token Traded Pricess')
                 st.error(f"Please Choose Timeframe Within Token Traded Pricess{e}")
 
    
@@ -344,7 +351,6 @@ class contractProcessor():
             if int(timeframe) > 60:
                     hour = str(timeframe //60)
                     minutes = timeframe %60
-                    print(f'{hour}:{minutes}m')
                     
                     timeframe = f'{hour}:{minutes}m'  if minutes > 0  else f'{hour}hr(s)' 
             else:
@@ -365,8 +371,6 @@ class contractProcessor():
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
         from_timestamp = time_object.timestamp()
         to_timestamp = processed_date_time.timestamp()
-        # st.write(combine)
-        # st.write(from_timestamp)
         self.from_timetamp = int(from_timestamp)
         self.to_timestamp = int(to_timestamp)
 
@@ -395,6 +399,19 @@ class contractProcessor():
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Accept": "application/json"
         }
+
+        # headers = {
+        #         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0",
+        #         "Accept": "application/json",
+        #         "Accept-Language": "en-US,en;q=0.5",
+        #         "Accept-Encoding": "gzip, deflate",
+        #         "Referer": "https://www.geckoterminal.com/",  # Important: sometimes required
+        #         "Origin": "https://www.geckoterminal.com",
+        #         "Connection": "keep-alive",
+        #         "Sec-Fetch-Dest": "empty",
+        #         "Sec-Fetch-Mode": "cors",
+        #         "Sec-Fetch-Site": "same-origin"
+        #     }
 
         # headers = {
         #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
@@ -428,6 +445,20 @@ class contractProcessor():
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Accept": "application/json"
         }
+       
+        # headers = {
+        #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0",
+        #     "Accept": "application/json",
+        #     "Accept-Language": "en-US,en;q=0.5",
+        #     "Accept-Encoding": "gzip, deflate",
+        #     "Referer": "https://www.geckoterminal.com/",  # Important: sometimes required
+        #     "Origin": "https://www.geckoterminal.com",
+        #     "Connection": "keep-alive",
+        #     "Sec-Fetch-Dest": "empty",
+        #     "Sec-Fetch-Mode": "cors",
+        #     "Sec-Fetch-Site": "same-origin"
+        #     }
+
         # headers = {
         #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
         #     "Accept": "application/json, text/plain, */*",
@@ -457,7 +488,19 @@ class contractProcessor():
                         break
                 return network_id,pair,symbol
             except Exception as e:
+                logging.error(f'Unable To Request For Contract Info From GeckoTerminal issue {e}')
                 st.error(f'Unable To Request For Contract Info From GeckoTerminal issue {e}')
+
+
+    async def fetchtokenSupply(self,session,network_id,token_address):
+            logging.info('Fetching For Token Supply')
+
+            url = f"https://api.geckoterminal.com/api/v2/networks/{network_id}/tokens/{token_address}?include=top_pools"
+            async with session.get(url) as response:
+                results =  await response.json()
+                data = results['data']['attributes']
+                supply = data['normalized_total_supply']
+                return supply
 
     # async def pair(self,session,address,pair_endpoint):
     async def pair(self,session,address):
@@ -468,36 +511,126 @@ class contractProcessor():
             async with session.get(pair_endpoint) as response:
                 try:
                     result = await response.json()
-                    # st.write(result)
                     if result['data']:
                         pair_address = result['data'][0]['attributes']['address']
                         symbol = result['data'][0]['attributes']['name']
                 except:
-                    # else:
                     pair_address = pair  
                     symbol = f"{symbol}/Token"
+
                 task_poolId = asyncio.create_task(self.Fetch_PoolId_TokenId(session,network_id,pair_address))
+                task_supply = asyncio.create_task(self.fetchtokenSupply(session,network_id,address))
                 poolId,pairId = await task_poolId
+                supply = await task_supply
                 token_data = {'address':address,  #add 'network_id' = network_id
                             'pair':pair_address,
                             'symbol':symbol,
                             'network_id':network_id,
-                            'poolId': f'{poolId}/{pairId}'}
+                            'poolId': f'{poolId}/{pairId}',
+                            'supply':supply}
                 self.pairs.append(pair_address)
                 self.tokens_data.append(token_data)
-            # except ValueError as e:
-            #     st.error(f'Check If This Contract Address Is Correct : {e}')
+                logging.info('Token Detail Added Successfully')
         except Exception as e:
+            logging.error('Check If This Mint Address Is Correct: Unable to fetch Pair Info')
             st.error(f'Check If This Mint Address Is Correct: Unable to fetch Pair Info{e}')
     
     async def pair_main(self):
         async with aiohttp.ClientSession() as session:  
             pairs_container = [self.pair(session,address) for address in self.mint_addresses]
             pairs = await asyncio.gather(*pairs_container)
+            if 'Search_tweets_Contract' in st.session_state:
+                st.session_state['tokens_data'] = self.tokens_data  # to be used by search coontract by twitter
 
     def fetch_pairs(self): 
         if 'data_frames' not in st.session_state: # so that slide dont refetch data again
             asyncio.run(self.pair_main())
+
+
+    def pooldate(self):
+        network_id = self.tokens_data[0]['network_id']
+        contract = self.tokens_data[0]['address']
+        url = f"https://api.geckoterminal.com/api/v2/networks/{network_id}/tokens/{contract}?include=top_pools"
+        response = requests.get(url)
+        if response.status_code != 200:
+            st.error('Unabe To Fetch Pool Date')
+            st.stop()
+        results =  response.json()
+        pooldata = results['included'][0]['attributes']
+        pool_creation_date = pooldata['pool_created_at']
+        return pool_creation_date
+    
+    def checkDuplicateUser(self,user_tweet,username,tweet_date):
+        from datetime import datetime
+        add = True
+        try:
+            for index,tweet in enumerate(user_tweet):
+                if tweet['username'] == username and datetime.strptime(tweet['created_at'],"%Y-%m-%d %H:%M") > datetime.strptime(tweet_date,"%Y-%m-%d %H:%M"):
+                    del user_tweet[index]
+                    add = True
+                    break
+                elif tweet['username'] == username and datetime.strptime(tweet['created_at'],"%Y-%m-%d %H:%M") < datetime.strptime(tweet_date,"%Y-%m-%d %H:%M"):
+                    add = False
+                    break
+                else:
+                    add = True
+        except Exception as e:
+            add = True
+        return user_tweet, add
+
+    def search_tweets_with_contract(self):
+        logging.info('Searching Tweets for Early Contract Mentions')
+        from datetime import datetime,timedelta
+        contract = self.tokens_data[0]['address']
+        pool_creation_date = self.pooldate()
+        
+        date = datetime.fromisoformat(pool_creation_date.replace('Z','+00:00'))
+        first_tweet_minute = st.session_state['first_tweet_minute'] 
+        new_date_pool_start = date + timedelta(minutes=first_tweet_minute) # Adjusted the starting time for the pool 1hr after to fetch price in geckoTerminal
+        end_date_search = date + timedelta(hours=2)  # this is 2 hours after the pool was created
+        start_time = new_date_pool_start.isoformat().replace('+00:00','Z')
+        end_date = end_date_search.isoformat().replace('+00:00','Z')
+        users_tweet = [ ]
+        try:
+            for response in tweepy.Paginator(self.client.search_recent_tweets,
+                                    contract,
+                                    start_time= start_time,  #pool_creation_date, 
+                                    end_time=end_date,
+                                    max_results=100,
+                                    limit=5, # consider this (make 5 request)
+                                     user_fields=['public_metrics','username'],
+                                    tweet_fields=['author_id','created_at','public_metrics'],
+                                    expansions=['author_id']):
+                user_map = {user.id: user for user in response.includes.get('users', [])}
+                for tweet in response.data:
+                    user = user_map.get(tweet.author_id)
+                    if user:
+                        metrics = user.public_metrics
+                        username = user.username
+                        follower_count = metrics['followers_count']
+                    else:
+                        continue
+                    tweet_date = tweet.created_at.strftime("%Y-%m-%d %H:%M")
+                    # Flter account with low followesr account Out
+                    follower_threshold = st.session_state['follower_threshold']
+                    if int(follower_count) < int(follower_threshold):
+                        continue
+                    users_tweet,affirm = self.checkDuplicateUser(users_tweet,username,tweet_date)
+                    if affirm is True:
+                        tweet_dict = {
+                                'tweet_text':tweet.text,
+                                'created_at':tweet_date,
+                                'username': username,
+                                'followers':follower_count,
+                                'tweet_id':tweet.id
+                                }
+                        users_tweet.append(tweet_dict)
+            self.tweets = users_tweet
+        except Exception as e:
+            logging.error('Fetching Tweets With Contract Failed')
+            st.error(f'Fetching Tweets With Contract Failed {e}')
+            st.stop()
+
 
     def NeededData(self,pricedata,timeframe):
         for key,value in pricedata.items():
@@ -515,7 +648,6 @@ class contractProcessor():
             if int(timeframe) > 60:
                     hour = str(timeframe //60)
                     minutes = timeframe %60
-                    print(f'{hour}:{minutes}m')
                     
                     timeframe = f'{hour}:{minutes}m'  if minutes > 0  else f'{hour}hr(s)' 
             else:
@@ -560,6 +692,7 @@ class contractProcessor():
             st.badge(f"Symbol : ${st.session_state['address_symbol'][st.session_state['slide_index']][1]}",color='orange')
             st.badge(f"Network : {st.session_state['address_symbol'][st.session_state['slide_index']][2]}",color='green')
             st.dataframe(st.session_state['data_frames'][address])
+            logging.info('Displayed Data')
 
             col1,col2,col3 = st.columns([1,2,3])
             with col1:
@@ -570,4 +703,5 @@ class contractProcessor():
                     
                     next_slide()
         except:
+            logging.error('Session Ended: Analyze Data Again')
             st.error('Session Ended: Analyze Data Again')

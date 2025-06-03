@@ -3,3 +3,5 @@ pandas
 pytz
 aiohttp
 streamlit
+gspread
+gspread_dataframe
