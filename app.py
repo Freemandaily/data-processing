@@ -398,7 +398,7 @@ def display(df_data):
     with col[1]:
         if st.button('Add To Sheet'):
             try:
-                gc = gspread.service_account(filename='freeman-461623-154dc403ca64.json')
+                gc = gspread.service_account(filename='/etc/secrets/freeman-461623-154dc403ca64.json')
                 spreadSheet = gc.open('TWEEET')
                 sheet = spreadSheet.worksheet('Sheet2')
             except:
