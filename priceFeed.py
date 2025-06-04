@@ -73,7 +73,8 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
                 task_price  = asyncio.create_task(Priceswharehouse(session,from_timestamp,to_timestamp,poolId))
                 price_data,new_date_timestamp = await task_price
                 
-                st.write(price_data)
+                if isinstance(price_data,str) or isinstance(new_date_timestamp,str):
+                    st.write(f"{price_data},{new_date_timestamp}")
                 if int(from_timestamp) in new_date_timestamp:
                     open_price = price_data[4]
                     price_data = price_data[4:]
