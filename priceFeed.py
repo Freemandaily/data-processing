@@ -45,6 +45,9 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         to_timestamp = int(to_timestamp)
         url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={from_timestamp}&to_timestamp={to_timestamp}&for_update=false&currency=usd&is_inverted=false'
         async with session.get(url=url,headers=headers) as response:
+            if response.status != 200:
+                st.write(url)
+                st.stop()
             result = await response.json()
             try:
                 datas = result['data']
