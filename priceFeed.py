@@ -50,6 +50,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
             async with session.get(url=url,headers=headers) as response:
                 if response.status != 200:
                     logging.warning(f"Fetching Price data with {url} Failed . Retrying for {retry} Times")
+                    time.sleep(10)
                     continue
                 result = await response.json()
                 datas = result['data']
