@@ -583,7 +583,7 @@ class contractProcessor(processor):
         from datetime import datetime,timedelta
         contract = self.tokens_data[0]['address']
         pool_creation_date = self.pooldate()
-        
+        st.write(f"Render Created time {pool_creation_date}")
         date = datetime.fromisoformat(pool_creation_date.replace('Z','+00:00'))
         first_tweet_minute = st.session_state['first_tweet_minute'] 
         new_date_pool_start = date + timedelta(minutes=first_tweet_minute) # Adjusted the starting time for the pool 1hr after to fetch price in geckoTerminal
