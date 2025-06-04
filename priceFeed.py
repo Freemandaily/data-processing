@@ -72,6 +72,8 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
             try:
                 task_price  = asyncio.create_task(Priceswharehouse(session,from_timestamp,to_timestamp,poolId))
                 price_data,new_date_timestamp = await task_price
+                
+                st.write(price_data)
                 if int(from_timestamp) in new_date_timestamp:
                     open_price = price_data[4]
                     price_data = price_data[4:]
@@ -88,7 +90,6 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
                 max_drawdown  = 0
                 entry_to_peak = str(round(((peak_price - open_price) /open_price) * 100,3)) +'%'
             except Exception as e:
-                st.write(price_data)
                 st.write(f"{from_timestamp}|{to_timestamp} {e}")
                 logging.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
                 st.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
