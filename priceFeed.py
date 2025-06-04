@@ -88,6 +88,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
                 max_drawdown  = 0
                 entry_to_peak = str(round(((peak_price - open_price) /open_price) * 100,3)) +'%'
             except:
+                st.write(f"{from_timestamp}|{to_timestamp}")
                 logging.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
                 st.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
             
@@ -106,6 +107,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
                             }
                 return price_info
             except Exception as e:
+                st.write(f"{from_timestamp}|{to_timestamp}")
                 logging.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
                 st.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
                 st.stop()
