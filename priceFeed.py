@@ -43,18 +43,19 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         }
         from_timestamp =  int(from_timestamp)
         to_timestamp = int(to_timestamp)
-        retry_time = 5
-        for retry in retry_time:
+        retry_times = 5
+        for retry in retry_times:
+
             url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={from_timestamp}&to_timestamp={to_timestamp}&for_update=false&currency=usd&is_inverted=false'
             async with session.get(url=url,headers=headers) as response:
                 if response.status != 200:
-                        logging.warning(f"Fetching Price data with {url} Failed . Retrying for {retry} Times")
-                        continue
+                    logging.warning(f"Fetching Price data with {url} Failed . Retrying for {retry} Times")
+                    continue
                 result = await response.json()
                 datas = result['data']
                 price_data = [value for data in datas for key in ['o','h','l','c'] for value in [data[key]]]
                 dates = [value for data in datas for key in ['dt'] for value in [data[key]]]
-    
+
                 """
                 This fetch get data from the gecko terminal website,
                 so the time is in GMT which is lagging 1 hour . 
@@ -62,6 +63,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
                 below code is used to mitigate it. 
                 i only use the time to check if the candle chart start from the self.from_timestamp
                 """
+                
                 from datetime import datetime,timedelta
                 new_dates_timestamp = [ ]
                 for date in dates:
@@ -69,29 +71,30 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
                     unix_timestamp = int(dt.timestamp())
                     new_dates_timestamp.append(unix_timestamp)
                 return price_data,new_dates_timestamp
-    
+
 
     # async def fetch_ohlc_and_compute(session,endpoint_req) -> dict:
     async def fetch_ohlc_and_compute(session,network,from_timestamp,to_timestamp,timeframe,poolId) -> dict:
             try:
                 task_price  = asyncio.create_task(Priceswharehouse(session,from_timestamp,to_timestamp,poolId))
                 price_data,new_date_timestamp = await task_price
+                # st.write(price_data)
                 if int(from_timestamp) in new_date_timestamp:
                     open_price = price_data[4]
                     price_data = price_data[4:]
-                    else:
-                        open_price = price_data[0]
+                else:
+                    open_price = price_data[0]
+
                 if int(to_timestamp) in new_date_timestamp:
                     price_data = price_data[:-4]
-            
+
                 close_price = price_data[-1]
                 peak_price = max(price_data)
                 lowest_price = min(price_data)
                 max_so_far = price_data[0]
                 max_drawdown  = 0
                 entry_to_peak = str(round(((peak_price - open_price) /open_price) * 100,3)) +'%'
-            except Exception as e:
-                # st.write(f"{from_timestamp}|{to_timestamp} {e}")
+            except:
                 logging.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
                 st.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
             
@@ -110,7 +113,6 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
                             }
                 return price_info
             except Exception as e:
-                st.write(f"{from_timestamp}|{to_timestamp},{e}")
                 logging.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
                 st.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
                 st.stop()
@@ -137,7 +139,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         from datetime import datetime
         combine = tweeted_date
         added_minute = added_minute + 1
-        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.FixedOffset(60))
+        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S")#.replace(tzinfo=pytz.FixedOffset(60))
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
         from_timestamp = time_object.timestamp()
         to_timestamp = processed_date_time.timestamp()
