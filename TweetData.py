@@ -626,8 +626,6 @@ class contractProcessor(processor):
                                 }
                         users_tweet.append(tweet_dict)
             self.tweets = users_tweet
-            st.write(users_tweet)
-            st.stop()
         except Exception as e:
             logging.error('Fetching Tweets With Contract Failed')
             st.error(f'Fetching Tweets With Contract Failed {e}')
