@@ -46,6 +46,9 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={from_timestamp}&to_timestamp={to_timestamp}&for_update=false&currency=usd&is_inverted=false'
         async with session.get(url=url,headers=headers) as response:
             result = await response.json()
+            if isinstance(result,str):
+                st.write(f"tHE ISSUE IS THIS {url}")
+                st.stop()
             datas = result['data']
             price_data = [value for data in datas for key in ['o','h','l','c'] for value in [data[key]]]
             dates = [value for data in datas for key in ['dt'] for value in [data[key]]]
@@ -72,9 +75,6 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
             try:
                 task_price  = asyncio.create_task(Priceswharehouse(session,from_timestamp,to_timestamp,poolId))
                 price_data,new_date_timestamp = await task_price
-                
-                if isinstance(price_data,str) or isinstance(new_date_timestamp,str):
-                    st.write(f"{price_data},{new_date_timestamp}")
                 if int(from_timestamp) in new_date_timestamp:
                     open_price = price_data[4]
                     price_data = price_data[4:]
