@@ -44,6 +44,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         from_timestamp =  int(from_timestamp)
         to_timestamp = int(to_timestamp)
         retry_times = 5
+        time.sleep(2)
         for retry in range(retry_times):
 
             url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={from_timestamp}&to_timestamp={to_timestamp}&for_update=false&currency=usd&is_inverted=false'
@@ -383,7 +384,7 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                                                          'network':network,
                                                          'symbol': symbol.split('/')[0],# jupToken['symbol'],
                                                             }
-                    
+                time.sleep(3)
                 price_timeframes = fetchPrice(network,pair_address,date,timeframe,token_data['poolId'])
                 if int(timeframe) >= 60:
                     hour = str(timeframe //60)
