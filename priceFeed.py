@@ -46,12 +46,13 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={from_timestamp}&to_timestamp={to_timestamp}&for_update=false&currency=usd&is_inverted=false'
         async with session.get(url=url,headers=headers) as response:
             result = await response.json()
-            if isinstance(result,str):
-                st.write(f"tHE ISSUE IS THIS {url}")
+            try:
+                datas = result['data']
+                price_data = [value for data in datas for key in ['o','h','l','c'] for value in [data[key]]]
+                dates = [value for data in datas for key in ['dt'] for value in [data[key]]]
+            except:
+                st.write(f"Here is the issue in url {result}")
                 st.stop()
-            datas = result['data']
-            price_data = [value for data in datas for key in ['o','h','l','c'] for value in [data[key]]]
-            dates = [value for data in datas for key in ['dt'] for value in [data[key]]]
 
             """
             This fetch get data from the gecko terminal website,
@@ -62,10 +63,14 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
             """
             from datetime import datetime,timedelta
             new_dates_timestamp = [ ]
-            for date in dates:
-                dt = datetime.fromisoformat(date.replace('Z', '+00:00'))
-                unix_timestamp = int(dt.timestamp())
-                new_dates_timestamp.append(unix_timestamp)
+            try:
+                for date in dates:
+                    dt = datetime.fromisoformat(date.replace('Z', '+00:00'))
+                    unix_timestamp = int(dt.timestamp())
+                    new_dates_timestamp.append(unix_timestamp)
+            except:
+                st.write(f"Her anoothe issue in url{dates}")
+                st.stop()
             # st.write(price_data)
             return price_data,new_dates_timestamp
 
@@ -75,21 +80,28 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
             try:
                 task_price  = asyncio.create_task(Priceswharehouse(session,from_timestamp,to_timestamp,poolId))
                 price_data,new_date_timestamp = await task_price
-                if int(from_timestamp) in new_date_timestamp:
-                    open_price = price_data[4]
-                    price_data = price_data[4:]
-                else:
-                    open_price = price_data[0]
-
-                if int(to_timestamp) in new_date_timestamp:
-                    price_data = price_data[:-4]
-
-                close_price = price_data[-1]
-                peak_price = max(price_data)
-                lowest_price = min(price_data)
-                max_so_far = price_data[0]
-                max_drawdown  = 0
-                entry_to_peak = str(round(((peak_price - open_price) /open_price) * 100,3)) +'%'
+                try:
+                    if int(from_timestamp) in new_date_timestamp:
+                        open_price = price_data[4]
+                        price_data = price_data[4:]
+                    else:
+                        open_price = price_data[0]
+                except:
+                    st.write(f"Firt erro in ohlc{price_data,new_date_timestamp }")
+                    st.stop()
+                try:
+                    if int(to_timestamp) in new_date_timestamp:
+                        price_data = price_data[:-4]
+                
+                    close_price = price_data[-1]
+                    peak_price = max(price_data)
+                    lowest_price = min(price_data)
+                    max_so_far = price_data[0]
+                    max_drawdown  = 0
+                    entry_to_peak = str(round(((peak_price - open_price) /open_price) * 100,3)) +'%'
+                except:
+                    st.write(f"lasst erorohere {price_data}")
+                    st.stop()
             except Exception as e:
                 st.write(f"{from_timestamp}|{to_timestamp} {e}")
                 logging.error('This Token Hasnt Appeared On GeckoTerminal Api Yet AS AT Time Posted')
