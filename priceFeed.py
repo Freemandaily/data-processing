@@ -317,10 +317,8 @@ def scoring(timeframe,price_change):
 # Getting the different price timeframe 
 def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
     logging.info('Fetching Price Of Tweeted Token')
-    tweet_token_detail_updated = {}
     structured_data = {}
     for date , token_fetched in tweet_token_detail.items():
-        logging.info('starting')
         date_object = datetime.strptime(str(token_fetched['date']), "%Y-%m-%d %H:%M")
         date = date_object + timedelta(hours=1)
         # identity = token_fetched['username']
@@ -383,7 +381,6 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                 tokens_data = st.session_state['tokens_data']
 
             for token_data in tokens_data:# token_contracts:
-                logging.info('Grabbing fetche data')
                 pair_address = token_data['pair']
                 token_address = token_data['address']
                 symbol = token_data['symbol']
@@ -439,11 +436,9 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                 entry_to_peak_percent_change = price_data[f'{setTimeframe}']['entry_to_peak']
                 structured_data[identity][token_address][f'{setTimeframe}_Score'] = scoring(timeframe,entry_to_peak_percent_change)
                 structured_data[identity][token_address][f'{setTimeframe} Drawdown'] = price_data[f'{setTimeframe}']['max_drawdown']
-                # tweet_token_detail_updated[date] = token_fetched # To update the tweeted data to relevant ones
+                
     
-    # Setting the Updated token_detail in session
-    # st.session_state['tweeted_token_details'] = tweet_token_detail_updated
-    logging.info('New Tweeted Token Data set in Session')
+   
     if 'valid contracts' in st.session_state:
         del st.session_state['valid contracts']
         
