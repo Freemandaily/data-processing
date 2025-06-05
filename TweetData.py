@@ -484,6 +484,7 @@ class contractProcessor(processor):
         url = f'https://app.geckoterminal.com/api/p1/search?query={address}'
         async with session.get(url,headers=headers) as response:
             try:
+                st.write(f"{response.status} for fetch network id")
                 result = await response.json()
                 data = result['data']['attributes']['pools'][0]
                 pair = data['address']
@@ -517,6 +518,7 @@ class contractProcessor(processor):
             pair_endpoint = f'https://api.geckoterminal.com/api/v2/networks/{network_id}/tokens/{address}/pools?include=base_token&page=1'
             async with session.get(pair_endpoint) as response:
                 try:
+                    st.write(f"check pair endpoint {response.status}")
                     result = await response.json()
                     if result['data']:
                         pair_address = result['data'][0]['attributes']['address']
