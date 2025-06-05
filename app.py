@@ -71,6 +71,10 @@ def worksForReload(contracts_input,choose_time,choose_date,first_tweet_minute,fo
 
                 if 'Search_tweets_Contract_displayed' in st.session_state :
                     del st.session_state['Search_tweets_Contract_displayed']
+                
+                if 'Influencer_data' in st.session_state:
+                    del st.session_state['Influencer_data'] 
+
 
                 if 'data_frames' in st.session_state:
                     del st.session_state['data_frames']
@@ -274,6 +278,7 @@ if search.search_with != 'Contracts':
 
         with st.spinner('Fetching Tweeted Tokens and Price Datas. Please Wait.....'):
             analyzor = token_tweeted_analyzor(tweeted_token_details) # Removed Token choice
+            st.session_state['Timeframe'] = 5
         if 'Error' in analyzor:
             st.error(analyzor['Error'])
             st.stop()
@@ -329,6 +334,7 @@ else:
         with st.spinner('Fetching Tweeted Contract Price Datas. Please Wait.....'):
             tweeted_Token_details = st.session_state['tweeted_token_details'] 
             analyzor = token_tweeted_analyzor(tweeted_Token_details,5)
+            st.session_state['Timeframe'] = 5
 
             if 'Error' in analyzor:
                 st.error(analyzor['Error'])
@@ -357,7 +363,8 @@ def display(df_data):
         accept_new_options=True
     )
     
-    if 'displayed' in st.session_state and next_timeframe !=None:
+    if 'displayed' in st.session_state and next_timeframe !=None and  st.session_state['Timeframe'] != next_timeframe:
+        st.session_state['Timeframe'] = next_timeframe
         if isinstance(next_timeframe,str):
             try:
                 hour_minute = next_timeframe.split(':')
@@ -374,6 +381,7 @@ def display(df_data):
         tweeted_token_details = st.session_state['tweeted_token_details']
         analyzor = token_tweeted_analyzor(tweeted_token_details,int(next_timeframe))
         df_data = add_to_csv(analyzor) 
+        st.session_state['df_data'] = df_data
     
     logging.info('Displaying Data')
     st.dataframe(df_data)
@@ -398,7 +406,7 @@ def display(df_data):
     with col[1]:
         if st.button('Add To Sheet'):
             try:
-                gc = gspread.service_account(filename='/etc/secrets/freeman-461623-154dc403ca64.json')
+                gc = gspread.service_account(filename='freeman-461623-154dc403ca64.json')
                 spreadSheet = gc.open('TWEEET')
                 sheet = spreadSheet.worksheet('Sheet2')
             except:

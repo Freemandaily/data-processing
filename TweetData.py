@@ -17,14 +17,14 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] - %(message)s'
 )
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
-try:
-    bearerToken =st.secrets['bearer_token']
-except:
-    bearerToken = os.environ.get('bearerToken')
+# try:
+#     bearerToken =st.secrets['bearer_token']
+# except:
+#     bearerToken = os.environ.get('bearerToken')
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -119,6 +119,7 @@ class processor:
                                        'date':data['date'],
                                        'tweet_id':data['tweet_id'],}
         details = {date: tokenName_contract for date,tokenName_contract in details.items() if tokenName_contract['Token_names'] or tokenName_contract['contracts']}
+        
         if details:
             st.toast('Tweets Containing Token Symbols Found!')
             time.sleep(3)
@@ -135,6 +136,8 @@ class processor:
         tweets = self.tweets
         if isinstance(tweets,dict) and 'Error' in tweets:
             return tweets # Error handling for streamlit
+        elif tweets == None:
+            st.write('There is no Tweet To Process. Try Again Please')
         fetched_Token_details = []
     
         if tweets:
@@ -156,6 +159,10 @@ class processor:
                         'tweet_id':tweet['tweet_id']
                     }
                 fetched_Token_details.append(refined_details)
+            # if 'Search_tweets_Contract' not in st.session_state and len(fetched_Token_details) >30:
+            #     earliest_tweet = 30
+            #     fetched_Token_details = fetched_Token_details[:earliest_tweet]
+            #     # st.write(len(fetched_Token_details)) # to get only 15 tweee
             tweeted_Token_details = self.Reformat(fetched_Token_details)
             if 'Search_tweets_Contract' not  in st.session_state:
                 return tweeted_Token_details
@@ -489,7 +496,7 @@ class contractProcessor(processor):
                 return network_id,pair,symbol
             except Exception as e:
                 logging.error(f'Unable To Request For Contract Info From GeckoTerminal issue {e}')
-                st.error(f'Unable To Request For Contract Info From GeckoTerminal issue {e}')
+                # st.error(f'Unable To Request For Contract Info From GeckoTerminal issue {e}')
 
 
     async def fetchtokenSupply(self,session,network_id,token_address):
@@ -533,7 +540,7 @@ class contractProcessor(processor):
                 logging.info('Token Detail Added Successfully')
         except Exception as e:
             logging.error('Check If This Mint Address Is Correct: Unable to fetch Pair Info')
-            st.error(f'Check If This Mint Address Is Correct: Unable to fetch Pair Info{e}')
+            # st.error(f'Check If This Mint Address Is Correct: Unable to fetch Pair Info{e}')
     
     async def pair_main(self):
         async with aiohttp.ClientSession() as session:  
@@ -583,6 +590,7 @@ class contractProcessor(processor):
         from datetime import datetime,timedelta
         contract = self.tokens_data[0]['address']
         pool_creation_date = self.pooldate()
+        # st.write(f'This pool Was Created in {pool_creation_date}')
         date = datetime.fromisoformat(pool_creation_date.replace('Z','+00:00'))
         first_tweet_minute = st.session_state['first_tweet_minute'] 
         new_date_pool_start = date + timedelta(minutes=first_tweet_minute) # Adjusted the starting time for the pool 1hr after to fetch price in geckoTerminal
@@ -627,8 +635,8 @@ class contractProcessor(processor):
             self.tweets = users_tweet
         except Exception as e:
             logging.error('Fetching Tweets With Contract Failed')
-            st.error(f'Fetching Tweets With Contract Failed {e}')
-            st.stop()
+            # st.error(f'Fetching Tweets With Contract Failed {e}')
+            # st.stop()
 
 
     def NeededData(self,pricedata,timeframe):
