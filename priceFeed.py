@@ -153,7 +153,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         from datetime import datetime
         combine = tweeted_date
         added_minute = added_minute + 1
-        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.FixedOffset(60))
+        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S")#.replace(tzinfo=pytz.FixedOffset(60))
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
         from_timestamp = time_object.timestamp()
         to_timestamp = processed_date_time.timestamp()
@@ -317,12 +317,15 @@ def scoring(timeframe,price_change):
 # Getting the different price timeframe 
 def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
     logging.info('Fetching Price Of Tweeted Token')
+    tweet_token_detail_updated = {}
     structured_data = {}
-    identifier = 0 
     for date , token_fetched in tweet_token_detail.items():
+        logging.info('starting')
         date_object = datetime.strptime(str(token_fetched['date']), "%Y-%m-%d %H:%M")
         date = date_object + timedelta(hours=1)
-        identity = token_fetched['username']
+        # identity = token_fetched['username']
+        identity = str(date)
+        identifier = 0 
         
         # structured_data[identifier] = {}
         token_symbol = [symbol[1:].upper() for symbol in token_fetched['Token_names']]
@@ -365,7 +368,8 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
         #     except KeyboardInterrupt :
         #         Error_message = {'Error':'Application Runs Interrupted','Message':'Fetching Token Price Ranges'}
         #         return Error_message
-        
+        identity = identity + str(identifier)
+        structured_data[identity] = { }
         if len(token_contracts) > 0:
             if 'tokens_data' not in st.session_state:
                 process_contract = contractProcessor(token_contracts)
@@ -378,27 +382,24 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                     del st.session_state['data_frames']
                 tokens_data = st.session_state['tokens_data']
 
-            local_id = 0
             for token_data in tokens_data:# token_contracts:
+                logging.info('Grabbing fetche data')
                 pair_address = token_data['pair']
                 token_address = token_data['address']
                 symbol = token_data['symbol']
                 network = token_data['network_id']
-                identifier_str = str(identifier)
-                local_id_str = str(local_id)
-                identity = identity + identifier_str + local_id_str
+
+                identity = identity + str(identifier)
                 structured_data[identity] = { }
                 price_timeframes = fetchPrice(network,pair_address,date,timeframe,token_data['poolId'])
 
                 if not price_timeframes:
                     logging.warning('Empty Price Data Spotted , Skipping')
                     identifier +=1
-                    local_id +=1
                     continue
                 else:
                     # updating ids
                     identifier +=1
-                    local_id +=1 
 
                 if 'Search_tweets_Contract'in st.session_state:
                     structured_data[identity][token_address] = {'username': username,
@@ -438,7 +439,11 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                 entry_to_peak_percent_change = price_data[f'{setTimeframe}']['entry_to_peak']
                 structured_data[identity][token_address][f'{setTimeframe}_Score'] = scoring(timeframe,entry_to_peak_percent_change)
                 structured_data[identity][token_address][f'{setTimeframe} Drawdown'] = price_data[f'{setTimeframe}']['max_drawdown']
-        
+                # tweet_token_detail_updated[date] = token_fetched # To update the tweeted data to relevant ones
+    
+    # Setting the Updated token_detail in session
+    # st.session_state['tweeted_token_details'] = tweet_token_detail_updated
+    logging.info('New Tweeted Token Data set in Session')
     if 'valid contracts' in st.session_state:
         del st.session_state['valid contracts']
         
@@ -447,7 +452,6 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
        if 'df_data' not in st.session_state:
         st.toast('Filtering  Fetched Token Price Data!')
         logging.info('Filtering  Fetched Token Price Data!')
-        time.sleep(2)
        return structured_data
     else:
         logging.error('Error Fetching Token Price. CHeck If Token Is On GeckoTerminal Yet')

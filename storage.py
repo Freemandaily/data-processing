@@ -9,6 +9,9 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] - %(message)s'
 )
 
+# def filterForNone():
+
+
 def add_to_csv(tweeted_token:dict)->None:
     logging.info('Foramating Data for Display')
     # print(tweeted_token)
@@ -24,13 +27,11 @@ def add_to_csv(tweeted_token:dict)->None:
         return Error_message
 
     
-    id = 0
     for username_Id,info in tweeted_token.items():
         try:
             for token_address,token_data in info.items():
-                data = collect_data(username_Id,token_data,token_address,id)
+                data = collect_data(username_Id,token_data,token_address)
                 formated_data.append(data)
-            id +=1
         except:
             pass
         
@@ -40,11 +41,18 @@ def add_to_csv(tweeted_token:dict)->None:
             if data_key.split('_')[-1] == 'Score':
                 score += int(data_value)
         influencer_data['Total_Score'] = score
+    
+    max_column = 0
+    for influencer_call_data in formated_data:
+        if len(influencer_call_data) > max_column:
+            max_column = len(influencer_call_data) 
+        
+    formated_data = [influencer_call_data for influencer_call_data in formated_data if len(influencer_call_data) == max_column ]
 
     new_entry = pd.DataFrame(formated_data)
     return new_entry
 
-def collect_data(username_Id,token_data,token_address,id):
+def collect_data(username_Id,token_data,token_address):
     if username_Id not in st.session_state['Influencer_data']:
         st.session_state['Influencer_data'][username_Id] = { }
     try:
