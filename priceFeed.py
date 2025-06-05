@@ -44,7 +44,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         from_timestamp =  int(from_timestamp)
         to_timestamp = int(to_timestamp)
         retry_time = 5
-        # time.sleep(4)
+        time.sleep(4)
         for retry in range(retry_time):
             url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={from_timestamp}&to_timestamp={to_timestamp}&for_update=false&currency=usd&is_inverted=false'
             async with session.get(url=url,headers=headers) as response:
@@ -153,7 +153,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         from datetime import datetime
         combine = tweeted_date
         added_minute = added_minute + 1
-        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S")#.replace(tzinfo=pytz.FixedOffset(60))
+        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.FixedOffset(60))
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
         from_timestamp = time_object.timestamp()
         to_timestamp = processed_date_time.timestamp()
