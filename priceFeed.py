@@ -44,7 +44,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         from_timestamp =  int(from_timestamp)
         to_timestamp = int(to_timestamp)
         retry_time = 5
-        time.sleep(4)
+        # time.sleep(4)
         for retry in range(retry_time):
             url = f'https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={from_timestamp}&to_timestamp={to_timestamp}&for_update=false&currency=usd&is_inverted=false'
             async with session.get(url=url,headers=headers) as response:
@@ -153,7 +153,7 @@ def fetchPrice(network,pair,tweeted_date,timeframe,poolId):
         from datetime import datetime
         combine = tweeted_date
         added_minute = added_minute + 1
-        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.FixedOffset(60))
+        time_object = datetime.strptime(str(combine), "%Y-%m-%d %H:%M:%S")#.replace(tzinfo=pytz.FixedOffset(60))
         processed_date_time = time_object + timedelta(minutes=added_minute) # added 1 beacuse of how gecko terminal fetch price, price begin at the previou timestamp
         from_timestamp = time_object.timestamp()
         to_timestamp = processed_date_time.timestamp()
@@ -318,10 +318,13 @@ def scoring(timeframe,price_change):
 def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
     logging.info('Fetching Price Of Tweeted Token')
     structured_data = {}
-    for identifier , token_fetched in tweet_token_detail.items():
+    identifier = 0 
+    for date , token_fetched in tweet_token_detail.items():
         date_object = datetime.strptime(str(token_fetched['date']), "%Y-%m-%d %H:%M")
         date = date_object + timedelta(hours=1)
-        structured_data[identifier] = {}
+        identity = token_fetched['username']
+        
+        # structured_data[identifier] = {}
         token_symbol = [symbol[1:].upper() for symbol in token_fetched['Token_names']]
         token_contracts = [contract for contract in token_fetched['contracts']]
         username  = token_fetched['username']
@@ -375,18 +378,30 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                     del st.session_state['data_frames']
                 tokens_data = st.session_state['tokens_data']
 
+            local_id = 0
             for token_data in tokens_data:# token_contracts:
                 pair_address = token_data['pair']
                 token_address = token_data['address']
                 symbol = token_data['symbol']
                 network = token_data['network_id']
+                identifier_str = str(identifier)
+                local_id_str = str(local_id)
+                identity = identity + identifier_str + local_id_str
+                structured_data[identity] = { }
                 price_timeframes = fetchPrice(network,pair_address,date,timeframe,token_data['poolId'])
-                
+
                 if not price_timeframes:
                     logging.warning('Empty Price Data Spotted , Skipping')
+                    identifier +=1
+                    local_id +=1
                     continue
+                else:
+                    # updating ids
+                    identifier +=1
+                    local_id +=1 
+
                 if 'Search_tweets_Contract'in st.session_state:
-                    structured_data[identifier][token_address] = {'username': username,
+                    structured_data[identity][token_address] = {'username': username,
                                                                 'Followers': token_fetched['followers'],
                                                                 'Tweet_id':token_fetched['tweet_id'],
                                                                 'Tweet_Date':date,
@@ -397,7 +412,7 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                     affirm = pooldate(network,token_address,date)
                     if affirm == False:
                         continue
-                    structured_data[identifier][token_address] = {'username': username,
+                    structured_data[identity][token_address] = {'username': username,
                                                         'Tweet_Date':date,
                                                         'Tweet_id':token_fetched['tweet_id'],
                                                          'network':network,
@@ -412,17 +427,17 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                     setTimeframe = f'{timeframe}m'
 
                 price_data = price_timeframes[0][pair_address]
-                structured_data[identifier][token_address]['Price_Tweeted_At'] = price_data[f'{setTimeframe}']['open_price'] #fetchPrice(pair_address,date,5,timeframe_prices,get_start_price='YES')
-                structured_data[identifier][token_address]['Market_Cap'] = format_number(token_data['supply'],price_data[f'{setTimeframe}']['open_price'])
-                structured_data[identifier][token_address][f'price_{setTimeframe}'] = price_data[f'{setTimeframe}']['close_price'] #fetchPrice(pair_address,date,5,timeframe_prices) # 5 min timeFrame
-                percent_change = percent_increase(structured_data[identifier][token_address]['Price_Tweeted_At'],structured_data[identifier][token_address][f'price_{setTimeframe}'])
-                structured_data[identifier][token_address][f'price_{setTimeframe}%Increase'] = percent_change
-                structured_data[identifier][token_address][f'{setTimeframe}_lowest_price'] = price_data[f'{setTimeframe}']['lowest_price']
-                structured_data[identifier][token_address][f'{setTimeframe}_peak_price'] = price_data[f'{setTimeframe}']['peak_price']
-                structured_data[identifier][token_address][f'{setTimeframe}_entry_to_peak'] = price_data[f'{setTimeframe}']['entry_to_peak']
+                structured_data[identity][token_address]['Price_Tweeted_At'] = price_data[f'{setTimeframe}']['open_price'] #fetchPrice(pair_address,date,5,timeframe_prices,get_start_price='YES')
+                structured_data[identity][token_address]['Market_Cap'] = format_number(token_data['supply'],price_data[f'{setTimeframe}']['open_price'])
+                structured_data[identity][token_address][f'price_{setTimeframe}'] = price_data[f'{setTimeframe}']['close_price'] #fetchPrice(pair_address,date,5,timeframe_prices) # 5 min timeFrame
+                percent_change = percent_increase(structured_data[identity][token_address]['Price_Tweeted_At'],structured_data[identity][token_address][f'price_{setTimeframe}'])
+                structured_data[identity][token_address][f'price_{setTimeframe}%Increase'] = percent_change
+                structured_data[identity][token_address][f'{setTimeframe}_lowest_price'] = price_data[f'{setTimeframe}']['lowest_price']
+                structured_data[identity][token_address][f'{setTimeframe}_peak_price'] = price_data[f'{setTimeframe}']['peak_price']
+                structured_data[identity][token_address][f'{setTimeframe}_entry_to_peak'] = price_data[f'{setTimeframe}']['entry_to_peak']
                 entry_to_peak_percent_change = price_data[f'{setTimeframe}']['entry_to_peak']
-                structured_data[identifier][token_address][f'{setTimeframe}_Score'] = scoring(timeframe,entry_to_peak_percent_change)
-                structured_data[identifier][token_address][f'{setTimeframe} Drawdown'] = price_data[f'{setTimeframe}']['max_drawdown']
+                structured_data[identity][token_address][f'{setTimeframe}_Score'] = scoring(timeframe,entry_to_peak_percent_change)
+                structured_data[identity][token_address][f'{setTimeframe} Drawdown'] = price_data[f'{setTimeframe}']['max_drawdown']
         
     if 'valid contracts' in st.session_state:
         del st.session_state['valid contracts']

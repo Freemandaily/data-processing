@@ -11,6 +11,7 @@ logging.basicConfig(
 
 def add_to_csv(tweeted_token:dict)->None:
     logging.info('Foramating Data for Display')
+    # print(tweeted_token)
     formated_data = []
     tweeted_token = { date:value for date,value in tweeted_token.items() if value}
     if tweeted_token:
@@ -24,10 +25,10 @@ def add_to_csv(tweeted_token:dict)->None:
 
     
     id = 0
-    for date,info in tweeted_token.items():
+    for username_Id,info in tweeted_token.items():
         try:
             for token_address,token_data in info.items():
-                data = collect_data(token_data,token_address,id)
+                data = collect_data(username_Id,token_data,token_address,id)
                 formated_data.append(data)
             id +=1
         except:
@@ -43,24 +44,25 @@ def add_to_csv(tweeted_token:dict)->None:
     new_entry = pd.DataFrame(formated_data)
     return new_entry
 
-def collect_data(token_data,token_address,id):
-    if token_data['username']+str(id) not in st.session_state['Influencer_data']:
-        st.session_state['Influencer_data'][token_data['username']+str(id)] = { }
+def collect_data(username_Id,token_data,token_address,id):
+    if username_Id not in st.session_state['Influencer_data']:
+        st.session_state['Influencer_data'][username_Id] = { }
     try:
-        del st.session_state['Influencer_data'][token_data['username']+str(id)]['Address']
-        del st.session_state['Influencer_data'][token_data['username']+str(id)]['Tweet_Url'] 
-        del st.session_state['Influencer_data'][token_data['username']+str(id)]['Total_Score']  
+        del st.session_state['Influencer_data'][username_Id]['Address']
+        del st.session_state['Influencer_data'][username_Id]['Tweet_Url'] 
+        del st.session_state['Influencer_data'][username_Id]['Total_Score']  
     except:
         pass
     for token_key,value in token_data.items():
-        st.session_state['Influencer_data'][token_data['username']+str(id)][token_key] = value
+        st.session_state['Influencer_data'][username_Id][token_key] = value
     
-    st.session_state['Influencer_data'][token_data['username']+str(id)]['Address'] = token_address
+    st.session_state['Influencer_data'][username_Id]['Address'] = token_address
 
     try:
-        st.session_state['Influencer_data'][token_data['username']+str(id)]['Tweet_Url'] = f"https://x.com/{token_data['username']+str(id)}/status/{token_data['Tweet_id']}"
-        del st.session_state['Influencer_data'][token_data['username']+str(id)]['Tweet_id']
+        st.session_state['Influencer_data'][username_Id]['Tweet_Url'] = f"https://x.com/{token_data['username']}/status/{token_data['Tweet_id']}"
+        del st.session_state['Influencer_data'][username_Id]['Tweet_id']
     except Exception as e:
         pass
-    data = st.session_state['Influencer_data'][token_data['username']+str(id)]
+    
+    data = st.session_state['Influencer_data'][username_Id]
     return data
