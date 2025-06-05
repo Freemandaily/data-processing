@@ -25,10 +25,13 @@ def add_to_csv(tweeted_token:dict)->None:
     
     id = 0
     for date,info in tweeted_token.items():
-        for token_address,token_data in info.items():
-            data = collect_data(token_data,token_address,id)
-            formated_data.append(data)
-        id +=1
+        try:
+            for token_address,token_data in info.items():
+                data = collect_data(token_data,token_address,id)
+                formated_data.append(data)
+            id +=1
+        except:
+            pass
         
     for influencer_data in formated_data:
         score = 0
