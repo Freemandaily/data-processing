@@ -373,6 +373,7 @@ def Tweet_tokenInfoProcessor(tweet_token_detail:dict,timeframe):
                 process_contract = contractProcessor(token_contracts)
                 if 'data_frames' in st.session_state: # delete session set by contract search option
                     del st.session_state['data_frames']
+                time.sleep(3)
                 fetch_pairs = process_contract.fetch_pairs()
                 tokens_data = process_contract.tokens_data
             else:
