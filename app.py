@@ -21,46 +21,6 @@ class search_state():
 search = search_state()
 
 
-def restore():
-       
-    if 'download_dataframe' in st.session_state:
-        if st.button('Show Previous Data'):
-            df_data = st.session_state['download_dataframe']
-            st.dataframe(df_data)
-
-            def convert_for_download(df_data):
-                return df_data.to_csv().encode("utf-8")
-            csv = convert_for_download(df_data)
-
-            
-            st.download_button(
-                label="Re-Download CSV",
-                data=csv,
-                file_name="data.csv",
-                key=2,
-                mime="text/csv",
-                icon=":material/download:"
-            )
-restore() # To fetch previous Data
-
-def data_for_drawDown(tweeted_token):
-    tweeted_token = { date:value for date,value in tweeted_token.items() if value}
-    handles_data = [ ]
-    for date ,info in tweeted_token.items():
-        for token_address,token_data in info.items():
-            influencer_data = {
-                'username' :token_data['username'],
-                'prices' : [token_data['Price_Tweeted_At'],token_data['price_5m'],token_data['price_10m']],
-                'token': token_data['symbol']
-            }
-            if None in influencer_data['prices']:
-                continue
-            handles_data.append(influencer_data)
-    if handles_data:
-        st.session_state['handles_data'] = handles_data
-    else:
-        st.error('Cant Compute DrawnDown. Most Prices Are Missing')
-        st.stop()
 
 def worksForReload(contracts_input,choose_time,choose_date,first_tweet_minute,follower_threshold):
     try:
@@ -80,6 +40,8 @@ def worksForReload(contracts_input,choose_time,choose_date,first_tweet_minute,fo
                     del st.session_state['data_frames']
                     del st.session_state['address_symbol']
                     del st.session_state['token_price_info'] 
+                if 'linkSearch' in st.session_state:
+                    del  st.session_state['linkSearch']
             except:
                 pass
     except:
@@ -148,7 +110,7 @@ with st.sidebar:
     st.write(About)
 
 st.image('data-extract.png')
-def loadsearch(process=None):
+def loadsearch(process=None,timeframe=None):
     logging.info('Loading Search')
     if search.search_with == 'handle':
         logging.info('Searching With X Handle')
@@ -165,8 +127,12 @@ def loadsearch(process=None):
     elif search.search_with == 'link':
         logging.info('Searching With Link')
         with st.spinner(f'Processing  Tweets in Url......'):
-            process.search_with_id(username_url)
-            tweeted_token_details = process.processTweets()
+            timeframe = '5,30,2:0'
+            st.session_state['Timeframe'] = timeframe
+            # process.search_with_id(username_url)
+            # tweeted_token_details = process.processTweets()  # Enterance to new logic search 
+            tweeted_token_details = process.linkSearch(username_url,timeframe)
+            st.session_state['linkSearch'] = username_url
             return tweeted_token_details
     elif search.search_with == 'Contracts':
         search_option = st.selectbox(
@@ -268,7 +234,7 @@ if search.search_with != 'Contracts':
             del st.session_state['Influencer_data'] 
 
         process = processor()
-        tweeted_token_details = loadsearch(process)
+        tweeted_token_details = loadsearch(process,timeframe)
         if 'Error' in tweeted_token_details:
             st.error(tweeted_token_details['Error'])
             st.stop()
@@ -276,21 +242,26 @@ if search.search_with != 'Contracts':
             st.toast(f'{search.search_with} Tweets Successfully Processed!')    
         st.session_state['tweeted_token_details'] = tweeted_token_details # setting this so that for custom timeframe uses it
 
-        with st.spinner('Fetching Tweeted Tokens and Price Datas. Please Wait.....'):
-            analyzor = token_tweeted_analyzor(tweeted_token_details) # Removed Token choice
-            st.session_state['Timeframe'] = 5
-        if 'Error' in analyzor:
-            st.error(analyzor['Error'])
-            st.stop()
-
-        with st.spinner('Storing Tweeted Token(s) Data'):
-            df_data = add_to_csv(analyzor)  # Adding the tweeted token to cs file
-        if 'Error' in df_data:
-            st.error(df_data['Error'])
-            st.stop()
-        st.success( 'Succesfully Analyzed Tweeted Token(s)',icon="✅")
-        time.sleep(1)
-        st.session_state['df_data'] = df_data
+        if 'linkSearch' not  in st.session_state:
+            with st.spinner('Fetching Tweeted Tokens and Price Datas. Please Wait.....'):
+                analyzor = token_tweeted_analyzor(tweeted_token_details) # Removed Token choice
+                st.session_state['Timeframe'] = 5
+            if 'Error' in analyzor:
+                st.error(analyzor['Error'])
+                st.stop()
+    
+            with st.spinner('Storing Tweeted Token(s) Data'):
+                df_data = add_to_csv(analyzor)  # Adding the tweeted token to cs file
+            if 'Error' in df_data:
+                st.error(df_data['Error'])
+                st.stop()
+            st.success( 'Succesfully Analyzed Tweeted Token(s)',icon="✅")
+            time.sleep(1)
+            st.session_state['df_data'] = df_data
+        else:
+            # Link Search
+            st.session_state['df_data'] = tweeted_token_details
+        
 else:
     st.session_state['first_tweet_minute'] = int(first_tweet_minute)
     st.session_state['follower_threshold'] = follower_threshold
@@ -362,59 +333,70 @@ def display(df_data):
         placeholder= 'Select Timeframe for x',
         accept_new_options=True
     )
-    
-    if 'displayed' in st.session_state and next_timeframe !=None and  st.session_state['Timeframe'] != next_timeframe:
-        st.session_state['Timeframe'] = next_timeframe
-        if isinstance(next_timeframe,str):
-            try:
-                hour_minute = next_timeframe.split(':')
-                hours_into_minutes = int(hour_minute[0]) 
-                minute = int(hour_minute[1])
-                next_timeframe = ( hours_into_minutes * 60) + minute
-            except:
+    if 'linkSearch' not in st.session_state:
+        if 'displayed' in st.session_state and next_timeframe !=None and  st.session_state['Timeframe'] != next_timeframe:
+            st.session_state['Timeframe'] = next_timeframe
+            if isinstance(next_timeframe,str):
                 try:
-                    next_timeframe = int(next_timeframe)
+                    hour_minute = next_timeframe.split(':')
+                    hours_into_minutes = int(hour_minute[0]) 
+                    minute = int(hour_minute[1])
+                    next_timeframe = ( hours_into_minutes * 60) + minute
                 except:
-                    st.error('Please Select Valid Timeframe')
-                    st.stop()
+                    try:
+                        next_timeframe = int(next_timeframe)
+                    except:
+                        st.error('Please Select Valid Timeframe')
+                        st.stop()
 
-        tweeted_token_details = st.session_state['tweeted_token_details']
-        analyzor = token_tweeted_analyzor(tweeted_token_details,int(next_timeframe))
-        df_data = add_to_csv(analyzor) 
+            tweeted_token_details = st.session_state['tweeted_token_details']
+            analyzor = token_tweeted_analyzor(tweeted_token_details,int(next_timeframe))
+            df_data = add_to_csv(analyzor) 
+            st.session_state['df_data'] = df_data
+    elif 'linkSearch' in st.session_state and next_timeframe == None:
+        add_to_csv(df_data)
+    elif 'linkSearch' in st.session_state and next_timeframe != None:
+        timeframe = st.session_state['Timeframe']+','+ str(next_timeframe)
+        st.session_state['Timeframe'] = timeframe
+        process = processor()
+        st.toast('Fecthing Added Timeframe Prices')
+        data = process.linkSearch(username_url,timeframe)
+        df_data = add_to_csv(data) 
         st.session_state['df_data'] = df_data
-    
-    logging.info('Displaying Data')
-    st.dataframe(df_data)
-    st.session_state['displayed'] = 'yes'
-    if 'Search_tweets_Contract' in st.session_state:
-        st.session_state['Search_tweets_Contract_displayed'] = 'Search_tweets_Contract_displayed'
-    st.session_state['download_dataframe'] = df_data
+        
+    if 'linkSearch' not in st.session_state:
+        logging.info('Displaying Data')
+        st.dataframe(df_data)
+        st.session_state['displayed'] = 'yes'
+        if 'Search_tweets_Contract' in st.session_state:
+            st.session_state['Search_tweets_Contract_displayed'] = 'Search_tweets_Contract_displayed'
+        st.session_state['download_dataframe'] = df_data
 
-    def convert_for_download(df_data):
-        return df_data.to_csv().encode("utf-8")
-    csv = convert_for_download(df_data)
-    col = st.columns([1,1])
-    with col[0]:
-        st.download_button(
-            label="Download CSV",
-            data=csv,
-            file_name="data.csv",
-            key=1,
-            mime="text/csv",
-            icon=":material/download:"
-        )
-    with col[1]:
-        if st.button('Add To Sheet'):
-            try:
-                gc = gspread.service_account(filename='freeman-461623-154dc403ca64.json')
-                spreadSheet = gc.open('TWEEET')
-                sheet = spreadSheet.worksheet('Sheet2')
-            except:
-                st.error('Unable To Add Data To Sheet')
-                st.stop()
-            last_row = len(sheet.get_all_values()) + 2
-            set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
-            st.toast( 'Succesfully Added Data To Sheet')
+    # def convert_for_download(df_data):
+    #     return df_data.to_csv().encode("utf-8")
+    # csv = convert_for_download(df_data)
+    # col = st.columns([1,1])
+    # with col[0]:
+    #     st.download_button(
+    #         label="Download CSV",
+    #         data=csv,
+    #         file_name="data.csv",
+    #         key=1,
+    #         mime="text/csv",
+    #         icon=":material/download:"
+    #     )
+    # with col[1]:
+    #     if st.button('Add To Sheet'):
+    #         try:
+    #             gc = gspread.service_account(filename='freeman-461623-154dc403ca64.json')
+    #             spreadSheet = gc.open('TWEEET')
+    #             sheet = spreadSheet.worksheet('Sheet2')
+    #         except:
+    #             st.error('Unable To Add Data To Sheet')
+    #             st.stop()
+    #         last_row = len(sheet.get_all_values()) + 2
+    #         set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
+    #         st.toast( 'Succesfully Added Data To Sheet')
         
 if 'df_data' in st.session_state: # For displaying the Tweeted data
     display(st.session_state['df_data'])

@@ -17,14 +17,15 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] - %(message)s'
 )
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
-try:
-    bearerToken =st.secrets['bearer_token']
-except:
-    bearerToken = os.environ.get('bearerToken')
+import requests
+# try:
+#     bearerToken =st.secrets['bearer_token']
+# except:
+#     bearerToken = os.environ.get('bearerToken')
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -53,6 +54,20 @@ class processor:
             Error_message = {'Error':f'Error: {e}\n.Upgrade Your X Developer Plan or Try Again later'} # handle error according to it error
             return Error_message
         
+    def linkSearch(self,link:str,timeframe:str):
+        url = 'https://basesearch.onrender.com/link'
+        params ={
+            'tweet_url':link,
+            'timeframe':timeframe
+        }
+        response = requests.get(url=url,params=params)
+        if response.status_code == 200:
+            data = response.json()
+            return data
+        return {'Error':f'Failed Search With Code {response.status_code}.module:TweetData.py'}
+
+
+
     # Fetching Ticker and contracts contains in the tweet
     def fetchTicker_Contract(self,tweet_text:str) -> dict:
         logging.info('Fetching Tweeted Contract in the Tweet')
@@ -162,13 +177,12 @@ class processor:
             # if 'Search_tweets_Contract' not in st.session_state and len(fetched_Token_details) >30:
             #     earliest_tweet = 30
             #     fetched_Token_details = fetched_Token_details[:earliest_tweet]
-            #     # st.write(len(fetched_Token_details)) # to get only 15 tweee
+            #     # st.write(len(fetched_Token_details)) # to get only 15 tweeet
             tweeted_Token_details = self.Reformat(fetched_Token_details)
             if 'Search_tweets_Contract' not  in st.session_state:
                 return tweeted_Token_details
             else:
-                st.session_state['tweeted_token_details'] = tweeted_Token_details
-                
+                st.session_state['tweeted_token_details'] = tweeted_Token_details        
         else :
             Error_message = {'Error':f'Not Able To Process {self.username} Tweets! Please check I'}
             if 'Search_tweets_Contract' not  in st.session_state:
@@ -263,7 +277,7 @@ class contractProcessor(processor):
         #     "Sec-Fetch-Site": "same-site",
         #     "Priority": "u=1, i"
         #     }
-        
+                
         url = f"https://app.geckoterminal.com/api/p1/candlesticks/{poolId}?resolution=1&from_timestamp={self.from_timetamp}&to_timestamp={self.to_timestamp}&for_update=false&currency=usd&is_inverted=false"
         
         try:
@@ -286,6 +300,10 @@ class contractProcessor(processor):
                     dt = datetime.fromisoformat(date.replace('Z', '+00:00'))
                     unix_timestamp = int(dt.timestamp())
                     new_dates_timestamp.append(unix_timestamp)
+                st.write(price_data)
+                st.write(poolId)
+                st.write(self.from_timetamp)
+                st.write(self.to_timestamp)
                 return price_data,new_dates_timestamp
         except Exception as e:
             logging.error("Cant Fetch Price")
@@ -325,7 +343,7 @@ class contractProcessor(processor):
                 lowest_price =  "{:.13f}".format(lowest_price).rstrip("0")
                 peak_price = "{:.13f}".format(peak_price).rstrip("0")
 
-            except:
+            except Exception as e:
                 logging.error('Please Choose Timeframe Within Token Traded Price')
                 st.error(f"Please Choose Timeframe Within Token Traded Prices{e}")
                

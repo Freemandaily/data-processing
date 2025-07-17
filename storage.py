@@ -14,43 +14,47 @@ logging.basicConfig(
 
 def add_to_csv(tweeted_token:dict)->None:
     logging.info('Foramating Data for Display')
-    # print(tweeted_token)
-    formated_data = []
-    tweeted_token = { date:value for date,value in tweeted_token.items() if value}
-    if tweeted_token:
-        if 'Influencer_data' not in st.session_state:
-            st.session_state['Influencer_data'] = { }
-            st.toast('Adding Tweeted Token Data To Cvs File!')
+    if 'linkSearch' not in st.session_state:
+        formated_data = []
+        tweeted_token = { date:value for date,value in tweeted_token.items() if value}
+        if tweeted_token:
+            if 'Influencer_data' not in st.session_state:
+                st.session_state['Influencer_data'] = { }
+                st.toast('Adding Tweeted Token Data To Cvs File!')
+        else:
+            logging.error('Tokens  Contains Invalid Price')
+            Error_message = {'Error':'Tokens  Contains Invalid Price','Message':'Adding Tweeted Token Data To Cvs File!'}
+            return Error_message
+
+        
+        for username_Id,info in tweeted_token.items():
+            try:
+                for token_address,token_data in info.items():
+                    data = collect_data(username_Id,token_data,token_address)
+                    formated_data.append(data)
+            except:
+                pass
+            
+        for influencer_data in formated_data:
+            score = 0
+            for data_key,data_value in influencer_data.items():
+                if data_key.split('_')[-1] == 'Score':
+                    score += int(data_value)
+            influencer_data['Total_Score'] = score
+        
+        max_column = 0
+        for influencer_call_data in formated_data:
+            if len(influencer_call_data) > max_column:
+                max_column = len(influencer_call_data) 
+            
+        formated_data = [influencer_call_data for influencer_call_data in formated_data if len(influencer_call_data) == max_column ]
+
+        new_entry = pd.DataFrame(formated_data)
+        return new_entry
     else:
-        logging.error('Tokens  Contains Invalid Price')
-        Error_message = {'Error':'Tokens  Contains Invalid Price','Message':'Adding Tweeted Token Data To Cvs File!'}
-        return Error_message
+        linkSearchDisplay(tweeted_token)
+        pass
 
-    
-    for username_Id,info in tweeted_token.items():
-        try:
-            for token_address,token_data in info.items():
-                data = collect_data(username_Id,token_data,token_address)
-                formated_data.append(data)
-        except:
-            pass
-        
-    for influencer_data in formated_data:
-        score = 0
-        for data_key,data_value in influencer_data.items():
-            if data_key.split('_')[-1] == 'Score':
-                score += int(data_value)
-        influencer_data['Total_Score'] = score
-    
-    max_column = 0
-    for influencer_call_data in formated_data:
-        if len(influencer_call_data) > max_column:
-            max_column = len(influencer_call_data) 
-        
-    formated_data = [influencer_call_data for influencer_call_data in formated_data if len(influencer_call_data) == max_column ]
-
-    new_entry = pd.DataFrame(formated_data)
-    return new_entry
 
 def collect_data(username_Id,token_data,token_address):
     if username_Id not in st.session_state['Influencer_data']:
@@ -74,3 +78,53 @@ def collect_data(username_Id,token_data,token_address):
     
     data = st.session_state['Influencer_data'][username_Id]
     return data
+
+def linkSearchDisplay(data):
+    dataframes = {}
+    symbols = []
+    date_tweeted = data[-1]['date_tweeted']
+    for item in data:
+        symbol_dfs = {}
+        for Token_symbol, value in item.items():
+            if Token_symbol.startswith('$') and value != 'Not On Bybit':
+                symbol_dfs[Token_symbol] = {
+                    'Info': ['Entry_Price', 'Price', '%_Change', 'Peak_Price', '%_Entry_to_Peak', 'lowest_Price','Max_Drawdown']
+                }
+                for timeframe_entry in value:
+                    symbol_dfs[Token_symbol][timeframe_entry['timeframe']] = [
+                                                                            timeframe_entry['Entry_Price'],
+                                                                            timeframe_entry['Price'],
+                                                                            timeframe_entry['%_Change'],
+                                                                            timeframe_entry['Peak_Price'],
+                                                                            timeframe_entry['%_Entry_to_Peak'],
+                                                                            timeframe_entry['lowest_Price'],
+                                                                            timeframe_entry['Max_Drawdown']  
+                    ]
+                # Create DataFrame
+                df = pd.DataFrame(symbol_dfs[Token_symbol])
+                dataframes[Token_symbol] = df
+                symbols.append(Token_symbol)
+    if 'slide_index' not in st.session_state:
+        st.session_state['slide_index'] = 0
+        
+    def next_slide():
+        if st.session_state.slide_index < len(st.session_state['data_frames']) - 1:
+            st.session_state['slide_index'] +=1
+
+    def prev_slide():
+        if st.session_state.slide_index > 0:
+            st.session_state['slide_index'] -=1
+
+    st.badge(f"Symbol : {symbols[st.session_state['slide_index']]}",color='orange')
+    st.badge(f'Date Tweeted : {date_tweeted}')
+    st.dataframe(dataframes[symbols[st.session_state['slide_index']]])
+    logging.info('Displayed Data')
+
+    col1,col2 = st.columns([1,2])
+    with col1:
+        if st.button('Prev. Token',disabled=st.session_state['slide_index'] == 0):
+            prev_slide()
+    with col2:
+        if st.button('Next Token',disabled=st.session_state['slide_index'] == len(symbols) -1 ) :
+            next_slide()
+
