@@ -82,6 +82,16 @@ def collect_data(username_Id,token_data,token_address):
 def linkSearchDisplay(data):
     dataframes = {}
     symbols = []
+    if data == None:
+        logging.error('This Ticker Is Not Available On Binance And Bybit Yet')
+        st.error('This Ticker Is Not Available On Binance And Bybit Yet')
+        st.stop()
+
+    validate = [ symbol for price_items in data for symbol,timeframe_data in price_items.items() if isinstance(timeframe_data,list)]
+    if not validate:
+        logging.error('This Ticker Is Not Available On Binance And Bybit Yet')
+        st.error('This Ticker Is Not Available On Binance And Bybit Yet')
+        st.stop()
     date_tweeted = data[-1]['date_tweeted']
     for item in data:
         symbol_dfs = {}
@@ -116,7 +126,7 @@ def linkSearchDisplay(data):
             st.session_state['slide_index'] -=1
 
     st.badge(f"Symbol : {symbols[st.session_state['slide_index']]}",color='orange')
-    st.badge(f'Date Tweeted : {date_tweeted}')
+    st.badge(f'Date Time: {date_tweeted}')
     st.dataframe(dataframes[symbols[st.session_state['slide_index']]])
     logging.info('Displayed Data')
 

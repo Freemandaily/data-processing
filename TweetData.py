@@ -17,14 +17,15 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] - %(message)s'
 )
 
-# with open('key.json','r') as file:
-#     keys = json.load(file)
-#     bearerToken =keys['bearerToken']
+with open('key.json','r') as file:
+    keys = json.load(file)
+    bearerToken =keys['bearerToken']
 
-try:
-    bearerToken =st.secrets['bearer_token']
-except:
-    bearerToken = os.environ.get('bearerToken')
+import requests
+# try:
+#     bearerToken =st.secrets['bearer_token']
+# except:
+#     bearerToken = os.environ.get('bearerToken')
 
 class processor:
     def __init__(self) -> None: # Default 7 days TimeFrame
@@ -55,6 +56,7 @@ class processor:
         
     def linkSearch(self,link:str,timeframe:str):
         url = 'https://basesearch.onrender.com/link'
+        # url = 'http://127.0.0.1:8000/link'
         params ={
             'tweet_url':link,
             'timeframe':timeframe
@@ -64,6 +66,20 @@ class processor:
             data = response.json()
             return data
         return {'Error':f'Failed Search With Code {response.status_code}.module:TweetData.py'}
+
+    def SearchTickerOnCex(self,tickers:str,start_date:str,timeframe:str) ->dict:
+        url = 'https://basesearch.onrender.com/ticker'
+        # url = 'http://127.0.0.1:8000/ticker'
+        params ={
+            'tickers':tickers,
+            'start_date':start_date,
+            'timeframe':timeframe
+        }
+        response = requests.get(url=url,params=params)
+        if response.status_code == 200:
+            data = response.json()
+            return data
+        return {'Error':f'Failed Search With On Cex Code {response.status_code}.module:TweetData.py'}
 
 
 

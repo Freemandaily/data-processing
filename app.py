@@ -22,7 +22,8 @@ search = search_state()
 
 
 
-def worksForReload(contracts_input,choose_time,choose_date,first_tweet_minute,follower_threshold):
+def worksForReload(contracts_input,choose_time,choose_date,first_tweet_minute,follower_threshold,username_url):
+    
     try:
         if st.session_state['contracts_input'] != contracts_input:
             try: 
@@ -34,7 +35,9 @@ def worksForReload(contracts_input,choose_time,choose_date,first_tweet_minute,fo
                 
                 if 'Influencer_data' in st.session_state:
                     del st.session_state['Influencer_data'] 
-
+                
+                if 'df_data'in st.session_state:
+                    del st.session_state['df_data']
 
                 if 'data_frames' in st.session_state:
                     del st.session_state['data_frames']
@@ -42,6 +45,9 @@ def worksForReload(contracts_input,choose_time,choose_date,first_tweet_minute,fo
                     del st.session_state['token_price_info'] 
                 if 'linkSearch' in st.session_state:
                     del  st.session_state['linkSearch']
+                if 'Search Ticker On Cex' in st.session_state:
+                    del st.session_state['Search Ticker On Cex']
+                
             except:
                 pass
     except:
@@ -85,6 +91,16 @@ def worksForReload(contracts_input,choose_time,choose_date,first_tweet_minute,fo
     except:
         pass
 
+    # try:
+    #     if st.session_state['username_url'] != username_url:
+    #         if 'linkSearch' in st.session_state:
+    #             del  st.session_state['linkSearch']
+    #         if 'Search Ticker On Cex' in st.session_state:
+    #             del st.session_state['Search Ticker On Cex']
+    # except:
+    #     pass
+
+
 
 st.header('Data-Extraction and Processing')
 with st.sidebar:
@@ -94,11 +110,10 @@ with st.sidebar:
     first_tweet_minute = st.slider('First Tweet Minute After Pool Creation',1,60,1) # GeckoTerminal price indexing changes somethings we use this to toggle price searhc time
     follower_threshold =  st.slider('Kols Followers Threshold',700,1000,1000)
     st.divider()
-    contracts_input = st.text_area('Enter Contracts',placeholder='4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R\n7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr')
+    contracts_input = st.text_area('Enter Contracts/Ticker Names',placeholder='4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R\n7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr\nBTC\nETH')
     choose_date = st.date_input(label='Set A Date',value='today')
     choose_time = st.time_input('Set Time',value=None,step=300)
-   
-    worksForReload(contracts_input,choose_time,choose_date,first_tweet_minute,follower_threshold)
+    worksForReload(contracts_input,choose_time,choose_date,first_tweet_minute,follower_threshold,username_url)
     st.divider()
     st.subheader('About')
     About = """
@@ -111,9 +126,11 @@ with st.sidebar:
 
 st.image('data-extract.png')
 def loadsearch(process=None,timeframe=None):
+    from datetime import datetime
     logging.info('Loading Search')
     if search.search_with == 'handle':
         logging.info('Searching With X Handle')
+        st.session_state['username_url'] = username_url
         with st.spinner(f'Loading @{username_url} Handle'):
             userHandler = process.Load_user(username_url,timeframe=timeframe) 
         if 'Error' in userHandler:
@@ -133,11 +150,12 @@ def loadsearch(process=None,timeframe=None):
             # tweeted_token_details = process.processTweets()  # Enterance to new logic search 
             tweeted_token_details = process.linkSearch(username_url,timeframe)
             st.session_state['linkSearch'] = username_url
+            st.session_state['username_url'] = username_url
             return tweeted_token_details
     elif search.search_with == 'Contracts':
         search_option = st.selectbox(
             'Specify How To Search For The Contract',
-            ('Search Contracts Onchain','Search Contract From X Data'),
+            ('Search Ticker On Cex','Search Contracts Onchain','Search Contract From X Data'),
             index=None,
             placeholder='Choose Search Option'
             )
@@ -147,8 +165,7 @@ def loadsearch(process=None,timeframe=None):
             if 'data_frames' in st.session_state:
                 del st.session_state['data_frames']
 
-            combine_date_time = None
-            
+            combine_date_time = None  
         elif search_option == 'Search Contracts Onchain':
             logging.info('Search Contracts Onchain Activated')
             if 'Search_tweets_Contract' in st.session_state: # delete the sessin set to indentify the contract search from x data
@@ -157,11 +174,40 @@ def loadsearch(process=None,timeframe=None):
             if 'df_data' in st.session_state:
                 del st.session_state['df_data']
             
-            
             if choose_date and choose_time:
                 st.session_state['choose_date'] = choose_date
                 st.session_state['choose_time'] = choose_time
                 combine_date_time =  datetime.combine(choose_date,choose_time)
+            else:
+                st.error('Please Choose Date And Time')
+                st.stop()
+        elif search_option == 'Search Ticker On Cex':
+            logging.info('Search Ticker On Cex Activated')
+            
+            if 'Search Ticker On Cex' in st.session_state:
+                return None
+            if choose_date and choose_time:
+                st.session_state['choose_date'] = choose_date
+                st.session_state['choose_time'] = choose_time
+                combine_date_time =  datetime.combine(choose_date,choose_time)
+                with st.spinner(f'Processing  Search Ticker On Cex......'):
+                    timeframe = '5,30,2:0'
+                    st.session_state['Timeframe'] = timeframe
+                    tickers = contracts_input
+                    start_date = str(combine_date_time)
+                    tweeted_token_details = process.SearchTickerOnCex(tickers,start_date,timeframe)
+                    st.session_state['linkSearch'] = tickers
+                    st.session_state['Search Ticker On Cex'] = 'yes'
+                    st.session_state['contracts_input'] = contracts_input
+
+                    if 'Error' in tweeted_token_details:
+                        st.error(tweeted_token_details['Error'])
+                        st.stop()
+                    else:
+                        st.toast(f'{search.search_with} Tweets Successfully Processed!')    
+                    # st.session_state['tweeted_token_details'] = tweeted_token_details
+                    st.session_state['df_data'] = tweeted_token_details
+                    return tweeted_token_details
             else:
                 st.error('Please Choose Date And Time')
                 st.stop()
@@ -187,9 +233,10 @@ def loadsearch(process=None,timeframe=None):
             st.stop()
         
 if len(username_url) > 0 and len(contracts_input) > 0:
+    
     search_option = st.selectbox(
         'Multiple Search Input Detected Choose How To Search',
-        ('Search Only With X handle/Url','Search With Contracts'),
+        ('Search Only With X handle/Url','Search With Contracts/Ticker Name'),
         index=None,
         placeholder='Choose Search Option'
         )
@@ -200,10 +247,9 @@ if len(username_url) > 0 and len(contracts_input) > 0:
             search.search_with = 'link'
         else:
             search.search_with = 'handle'
-    elif search_option == 'Search With Contracts':
-        logging.info('Search With Contracts Selected')
+    elif search_option == 'Search With Contracts/Ticker Name':
+        logging.info('Search With Contracts/Ticker Name')
         search.search_with = 'Contracts'
-    
 
 elif len(username_url) > 0 and len(contracts_input) == 0:
     username_url = username_url.upper()
@@ -222,6 +268,8 @@ if search.search_with != 'Contracts':
     st.session_state['follower_threshold'] = follower_threshold
     if st.button('Analyse'):
         logging.info('Started Analyzing..')
+        if 'Search Ticker On Cex' in st.session_state:
+            del st.session_state['Search Ticker On Cex']
         if 'tokens_data' in st.session_state:
             del st.session_state['tokens_data']
         if 'Search_tweets_Contract' in st.session_state: # delete the sessin set to indentify the contract search from x data
@@ -265,67 +313,72 @@ if search.search_with != 'Contracts':
 else:
     st.session_state['first_tweet_minute'] = int(first_tweet_minute)
     st.session_state['follower_threshold'] = follower_threshold
-    process = loadsearch()
+    process_2 = processor()
+    process = loadsearch(process_2)
 
-    if 'data_frames' in st.session_state:
-        if st.button('Changed Input?:Rerun'):
-            if 'data_frames' in st.session_state:
-                del st.session_state['data_frames']
-                del st.session_state['address_symbol']
-                del st.session_state['token_price_info']
-    
-    process.fetch_pairs()
-    if 'Search_tweets_Contract' not in st.session_state :
-        next_timeframe = st.selectbox(
-            'Add Timeframe',
-            (5,10,15,30),
-            #index=None,
-            placeholder= 'Select Timeframe',
-            accept_new_options=True
-        )
-    
-        if  next_timeframe !=None:
-            if isinstance(next_timeframe,str):
-                try:
-                    hour_minute = next_timeframe.split(':')
-                    hours_into_minutes = int(hour_minute[0]) 
-                    minute = int(hour_minute[1])
-                    next_timeframe = ( hours_into_minutes * 60) + minute
-                except:
-                    try:
-                        next_timeframe = int(next_timeframe)
-                    except:
-                        st.error('Please Select Valid Timeframe')
-                        st.stop()
+    if 'linkSearch' not in st.session_state and 'Search Ticker On Cex' not in st.session_state:
+        if 'data_frames' in st.session_state:
+            if st.button('Changed Input?:Rerun'):
+                if 'data_frames' in st.session_state:
+                    del st.session_state['data_frames']
+                    del st.session_state['address_symbol']
+                    del st.session_state['token_price_info']
         
-    if 'Search_tweets_Contract' in st.session_state and  'Search_tweets_Contract_displayed' not in st.session_state :
-        with st.spinner('Searching Early Tweets Containing Contract.Might Take A While........'):
-            process.search_tweets_with_contract()
-            process.processTweets()
-        with st.spinner('Fetching Tweeted Contract Price Datas. Please Wait.....'):
-            tweeted_Token_details = st.session_state['tweeted_token_details'] 
-            analyzor = token_tweeted_analyzor(tweeted_Token_details,5)
-            st.session_state['Timeframe'] = 5
+        process.fetch_pairs()
+        if 'Search_tweets_Contract' not in st.session_state :
+            next_timeframe = st.selectbox(
+                'Add Timeframe',
+                (5,10,15,30),
+                #index=None,
+                placeholder= 'Select Timeframe',
+                accept_new_options=True
+            )
+        
+            if  next_timeframe !=None:
+                if isinstance(next_timeframe,str):
+                    try:
+                        hour_minute = next_timeframe.split(':')
+                        hours_into_minutes = int(hour_minute[0]) 
+                        minute = int(hour_minute[1])
+                        next_timeframe = ( hours_into_minutes * 60) + minute
+                    except:
+                        try:
+                            next_timeframe = int(next_timeframe)
+                        except:
+                            st.error('Please Select Valid Timeframe')
+                            st.stop()
+            
+        if 'Search_tweets_Contract' in st.session_state and  'Search_tweets_Contract_displayed' not in st.session_state :
+            with st.spinner('Searching Early Tweets Containing Contract.Might Take A While........'):
+                process.search_tweets_with_contract()
+                process.processTweets()
+            with st.spinner('Fetching Tweeted Contract Price Datas. Please Wait.....'):
+                tweeted_Token_details = st.session_state['tweeted_token_details'] 
+                analyzor = token_tweeted_analyzor(tweeted_Token_details,5)
+                st.session_state['Timeframe'] = 5
 
-            if 'Error' in analyzor:
-                st.error(analyzor['Error'])
-                st.stop()
+                if 'Error' in analyzor:
+                    st.error(analyzor['Error'])
+                    st.stop()
 
-            with st.spinner('Storing Tweeted Token(s) Datas'):
-                df_data = add_to_csv(analyzor)  
-            if 'Error' in df_data:
-                st.error(df_data['Error'])
-                st.stop()
-            st.success( 'Succesfully Analyzed Tweeted Token(s)',icon="✅")
-            time.sleep(1)
-            st.session_state['df_data'] = df_data
-    elif 'Search_tweets_Contract' not  in st.session_state :
-        process.process_contracts(next_timeframe)
-        price_datas = process.contracts_price_data
-        process.slide(price_datas,next_timeframe)
-    
+                with st.spinner('Storing Tweeted Token(s) Datas'):
+                    df_data = add_to_csv(analyzor)  
+                if 'Error' in df_data:
+                    st.error(df_data['Error'])
+                    st.stop()
+                st.success( 'Succesfully Analyzed Tweeted Token(s)',icon="✅")
+                time.sleep(1)
+                st.session_state['df_data'] = df_data
+        elif 'Search_tweets_Contract' not  in st.session_state :
+            process.process_contracts(next_timeframe)
+            price_datas = process.contracts_price_data
+            process.slide(price_datas,next_timeframe)
+   
+        
+        
   
 def display(df_data):
+    from datetime import datetime
     next_timeframe = st.selectbox(
         'Add Timeframe for x',
         (5,10,15,30),
@@ -333,7 +386,7 @@ def display(df_data):
         placeholder= 'Select Timeframe for x',
         accept_new_options=True
     )
-    if 'linkSearch' not in st.session_state:
+    if 'linkSearch' not in st.session_state and 'Search Ticker On Cex' not in st.session_state:
         if 'displayed' in st.session_state and next_timeframe !=None and  st.session_state['Timeframe'] != next_timeframe:
             st.session_state['Timeframe'] = next_timeframe
             if isinstance(next_timeframe,str):
@@ -353,18 +406,24 @@ def display(df_data):
             analyzor = token_tweeted_analyzor(tweeted_token_details,int(next_timeframe))
             df_data = add_to_csv(analyzor) 
             st.session_state['df_data'] = df_data
-    elif 'linkSearch' in st.session_state and next_timeframe == None:
+    elif 'linkSearch' in st.session_state and next_timeframe == None :
         add_to_csv(df_data)
     elif 'linkSearch' in st.session_state and next_timeframe != None:
         timeframe = st.session_state['Timeframe']+','+ str(next_timeframe)
         st.session_state['Timeframe'] = timeframe
         process = processor()
-        st.toast('Fecthing Added Timeframe Prices')
-        data = process.linkSearch(username_url,timeframe)
+        with st.spinner('Fecthing Added Timeframe Prices'):
+            if 'Search Ticker On Cex' in st.session_state:
+                combine_date_time =  datetime.combine(choose_date,choose_time)
+                tickers = contracts_input
+                start_date = str(combine_date_time)
+                data = process.SearchTickerOnCex(tickers,start_date,timeframe)
+            else:
+                data = process.linkSearch(username_url,timeframe)
         df_data = add_to_csv(data) 
         st.session_state['df_data'] = df_data
         
-    if 'linkSearch' not in st.session_state:
+    if 'linkSearch' not in st.session_state :
         logging.info('Displaying Data')
         st.dataframe(df_data)
         st.session_state['displayed'] = 'yes'
