@@ -108,7 +108,7 @@ def linkSearchDisplay(data):
         st.session_state['slide_index'] = 0
         
     def next_slide():
-        if st.session_state.slide_index < len(st.session_state['data_frames']) - 1:
+        if st.session_state.slide_index < len(symbols) - 1:
             st.session_state['slide_index'] +=1
 
     def prev_slide():
