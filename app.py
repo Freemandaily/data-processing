@@ -431,31 +431,31 @@ def display(df_data):
             st.session_state['Search_tweets_Contract_displayed'] = 'Search_tweets_Contract_displayed'
         st.session_state['download_dataframe'] = df_data
 
-    # def convert_for_download(df_data):
-    #     return df_data.to_csv().encode("utf-8")
-    # csv = convert_for_download(df_data)
-    # col = st.columns([1,1])
-    # with col[0]:
-    #     st.download_button(
-    #         label="Download CSV",
-    #         data=csv,
-    #         file_name="data.csv",
-    #         key=1,
-    #         mime="text/csv",
-    #         icon=":material/download:"
-    #     )
-    # with col[1]:
-    #     if st.button('Add To Sheet'):
-    #         try:
-    #             gc = gspread.service_account(filename='freeman-461623-154dc403ca64.json')
-    #             spreadSheet = gc.open('TWEEET')
-    #             sheet = spreadSheet.worksheet('Sheet2')
-    #         except:
-    #             st.error('Unable To Add Data To Sheet')
-    #             st.stop()
-    #         last_row = len(sheet.get_all_values()) + 2
-    #         set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
-    #         st.toast( 'Succesfully Added Data To Sheet')
-        
+        # def convert_for_download(df_data):
+        #     return df_data.to_csv().encode("utf-8")
+        # csv = convert_for_download(df_data)
+        col = st.columns([1,1])
+        # with col[0]:
+        #     st.download_button(
+        #         label="Download CSV",
+        #         data=csv,
+        #         file_name="data.csv",
+        #         key=1,
+        #         mime="text/csv",
+        #         icon=":material/download:"
+        #     )
+        with col[0]:
+            if st.button('Add To Sheet'):
+                try:
+                    gc = gspread.service_account(filename='freeman-461623-154dc403ca64.json')
+                    spreadSheet = gc.open('TWEEET')
+                    sheet = spreadSheet.worksheet('Sheet2')
+                except:
+                    st.error('Unable To Add Data To Sheet')
+                    st.stop()
+                last_row = len(sheet.get_all_values()) + 2
+                set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
+                st.toast( 'Succesfully Added Data To Sheet')
+            
 if 'df_data' in st.session_state: # For displaying the Tweeted data
     display(st.session_state['df_data'])

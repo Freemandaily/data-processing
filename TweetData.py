@@ -10,6 +10,8 @@ import asyncio
 import aiohttp
 import pandas as pd
 import logging
+import gspread
+from gspread_dataframe import set_with_dataframe
 
 
 logging.basicConfig(
@@ -166,7 +168,7 @@ class processor:
         if isinstance(tweets,dict) and 'Error' in tweets:
             return tweets # Error handling for streamlit
         elif tweets == None:
-            st.write('There is no Tweet To Process. Try Again Please')
+            st.error('There is no Tweet To Process. Try Again Please')
         fetched_Token_details = []
     
         if tweets:
@@ -314,10 +316,7 @@ class contractProcessor(processor):
                     dt = datetime.fromisoformat(date.replace('Z', '+00:00'))
                     unix_timestamp = int(dt.timestamp())
                     new_dates_timestamp.append(unix_timestamp)
-                st.write(price_data)
-                st.write(poolId)
-                st.write(self.from_timetamp)
-                st.write(self.to_timestamp)
+                
                 return price_data,new_dates_timestamp
         except Exception as e:
             logging.error("Cant Fetch Price")
@@ -744,3 +743,19 @@ class contractProcessor(processor):
         except:
             logging.error('Session Ended: Analyze Data Again')
             st.error('Session Ended: Analyze Data Again')
+        
+        col = st.columns([1,1])
+        with col[0]:
+            df_data = st.session_state['data_frames'][address]
+            if st.button('Add To Sheet'):
+                try:
+                    gc = gspread.service_account(filename='freeman-461623-154dc403ca64.json')
+                    spreadSheet = gc.open('TWEEET')
+                    sheet = spreadSheet.worksheet('Sheet2')
+                except:
+                    st.error('Unable To Add Data To Sheet')
+                    st.stop()
+                last_row = len(sheet.get_all_values()) + 2
+                set_with_dataframe(sheet, df_data, row=last_row, include_index=False, resize=True)
+                st.toast( 'Succesfully Added Data To Sheet')
+
