@@ -57,7 +57,7 @@ class processor:
         
     def linkSearch(self,link:str,timeframe:str):
         # url = 'https://basesearch.onrender.com/link'
-        url = 'https://basesearch-fscd.onrender.com/link'
+        url = 'https://basesearch2.onrender.com/link'
         # url = 'http://127.0.0.1:8000/link'
         params ={
             'tweet_url':link,
@@ -71,7 +71,7 @@ class processor:
 
     def SearchTickerOnCex(self,tickers:str,start_date:str,timeframe:str) ->dict:
         # url = 'https://basesearch.onrender.com/ticker'
-        url = 'https://basesearch-fscd.onrender.com/ticker'
+        url = 'https://basesearch2.onrender.com/ticker'
         # url = 'http://127.0.0.1:8000/ticker'
         params ={
             'tickers':tickers,
