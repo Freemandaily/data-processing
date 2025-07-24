@@ -144,7 +144,7 @@ def loadsearch(process=None,timeframe=None):
     elif search.search_with == 'link':
         logging.info('Searching With Link')
         with st.spinner(f'Processing  Tweets in Url......'):
-            timeframe = '5,30,2:0'
+            timeframe = '1,15,4:0,24:0'
             st.session_state['Timeframe'] = timeframe
             # process.search_with_id(username_url)
             # tweeted_token_details = process.processTweets()  # Enterance to new logic search 
@@ -191,7 +191,7 @@ def loadsearch(process=None,timeframe=None):
                 st.session_state['choose_time'] = choose_time
                 combine_date_time =  datetime.combine(choose_date,choose_time)
                 with st.spinner(f'Processing  Search Ticker On Cex......'):
-                    timeframe = '5,30,2:0'
+                    timeframe = '1,15,4:0,24:0'
                     st.session_state['Timeframe'] = timeframe
                     tickers = contracts_input
                     start_date = str(combine_date_time)
