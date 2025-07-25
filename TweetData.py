@@ -171,6 +171,7 @@ class processor:
             return tweets # Error handling for streamlit
         elif tweets == None:
             st.error('There is no Tweet To Process. Try Again Please')
+            return {'Error':'There is no Tweet To Process. Try Again Please'}
         fetched_Token_details = []
     
         if tweets:
